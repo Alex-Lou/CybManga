@@ -1,0 +1,56 @@
+# ============================================================
+#  SumiWire Pro — .gitignore (racine monorepo front + back)
+# ============================================================
+
+# --- Frontend : dépendances & sorties Node / Vite / Electron ---
+node_modules/
+dist/
+release/
+.vite/
+*.local
+
+# --- Backend : sorties Maven / Spring Boot ---
+target/
+
+# --- Sorties jpackage (runtime image + installeurs natifs) ---
+# Générées hors Maven, non reproductibles par `mvn package`.
+backend/MangaStudio/
+backend/SumiWire/
+
+# --- Base de données H2 (runtime / dev) ---
+backend/data/
+*.mv.db
+*.trace.db
+
+# --- Réglages locaux (machine) ---
+.claude/settings.local.json
+
+# --- IDE JetBrains ---
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# --- Éditeurs / OS ---
+.vscode/
+.DS_Store
+Thumbs.db
+
+# --- Secrets / environnement ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# --- Logs ---
+*.log
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ------------------------------------------------------------
+#  À VERSIONNER explicitement (ne PAS ignorer) :
+#  frontend/package-lock.json · frontend/public/ · frontend/electron/
+#  backend/src/ · *.config.js · pom.xml
+# ------------------------------------------------------------

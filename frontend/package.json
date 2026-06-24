@@ -1,0 +1,50 @@
+{
+  "name": "sumiwire-pro",
+  "version": "2.0.0",
+  "description": "Professional manga/comic editor",
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "electron:dev": "vite build && electron .",
+    "electron:build": "vite build && electron-builder --win portable"
+  },
+  "build": {
+    "appId": "com.sumiwire.pro",
+    "productName": "SumiWire Pro",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "win": {
+      "target": "portable",
+      "icon": "electron/icon.png",
+      "signAndEditExecutable": false
+    },
+    "portable": {
+      "artifactName": "SumiWire-Pro-Portable.exe"
+    }
+  },
+  "dependencies": {
+    "ag-psd": "^30.1.0",
+    "html2canvas": "^1.4.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@vitejs/plugin-react": "^4.2.0",
+    "autoprefixer": "^10.4.16",
+    "electron": "^40.6.1",
+    "electron-builder": "^26.8.1",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.4.0",
+    "vite": "^5.0.0"
+  }
+}
