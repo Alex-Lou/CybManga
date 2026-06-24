@@ -8,10 +8,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useStudio, ACTIONS } from '../../context/StudioContext';
 import { TOOLBAR, cn } from '../../styles/tailwind';
 import {
-  LAYOUT_TEMPLATES, PANEL_TYPES, BUBBLE_TYPES, DRAWING_TOOLS, COLOR_PALETTES,
+  LAYOUT_TEMPLATES, PANEL_TYPES, BUBBLE_TYPES, DRAWING_TOOLS,
 } from '../../utils/constants';
-import { generateHarmonyPalette, MOOD_PROFILES } from '../../utils/colorHarmony';
 import { readFileAsDataURL, saveBrushesToStorage } from '../../utils/helpers';
+import ColorPickerContent from './ColorPickerContent';
+import DrawingToolOptions from './DrawingToolOptions';
+import BrushCreatorModal from './BrushCreatorModal';
 
 const Toolbar = ({ onToggleRefPanel, showRefPanel }) => {
   const { state, dispatch, theme } = useStudio();
@@ -280,84 +282,17 @@ const Toolbar = ({ onToggleRefPanel, showRefPanel }) => {
           <DropdownButton id="colors" icon={
             <div className="w-5 h-5 rounded border" style={{ backgroundColor: state.drawing.color, borderColor: theme.border }} />
           } label="Couleurs" wide>
-            <div className="p-3 space-y-3">
-              {/* Main picker */}
-              <div className="flex items-center gap-3">
-                <input type="color" value={state.drawing.color}
-                  onChange={(e) => handleColorChange(e.target.value)}
-                  className="w-10 h-10 rounded border-2 cursor-pointer" style={{ borderColor: theme.border }} />
-                <div className="flex-1">
-                  <input type="text" value={state.drawing.color}
-                    onChange={(e) => { if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) handleColorChange(e.target.value); }}
-                    className="w-full px-2 py-1 text-xs font-mono rounded border"
-                    style={{ backgroundColor: theme.bg, borderColor: theme.border, color: theme.text }} />
-                </div>
-              </div>
-
-              {/* Recent colors */}
-              {(state.drawing.recentColors?.length > 0) && (
-                <div>
-                  <div className="text-xs opacity-50 mb-1">Récentes</div>
-                  <div className="flex flex-wrap gap-1">
-                    {state.drawing.recentColors.map((c, i) => (
-                      <button key={i} className="w-5 h-5 rounded border hover:scale-125 transition-transform"
-                        style={{ backgroundColor: c, borderColor: theme.border }}
-                        onClick={() => handleColorChange(c)} title={c} />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Palette selector */}
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <select className="text-xs rounded border px-1 py-0.5 flex-1"
-                    style={{ backgroundColor: theme.bg, borderColor: theme.border, color: theme.text }}
-                    value={activePalette} onChange={(e) => setActivePalette(e.target.value)}>
-                    {Object.entries(COLOR_PALETTES).map(([id, pal]) => (
-                      <option key={id} value={id}>{pal.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {COLOR_PALETTES[activePalette]?.colors.map((c, i) => (
-                    <button key={i} className="w-5 h-5 rounded border hover:scale-125 transition-transform"
-                      style={{ backgroundColor: c, borderColor: theme.border }}
-                      onClick={() => handleColorChange(c)} title={c} />
-                  ))}
-                </div>
-              </div>
-              {/* Harmony moods */}
-              <div>
-                <div className="text-xs opacity-50 mb-1">Harmonie par mood</div>
-                <div className="flex flex-wrap gap-1 mb-1">
-                  {Object.entries(MOOD_PROFILES).map(([id, mood]) => (
-                    <button key={id}
-                      className="px-1.5 py-0.5 text-xs rounded border transition-all hover:opacity-80"
-                      style={{
-                        borderColor: harmonyMood === id ? theme.primary : theme.border,
-                        backgroundColor: harmonyMood === id ? `${theme.primary}20` : 'transparent',
-                        color: theme.text,
-                      }}
-                      onClick={() => { setHarmonyMood(id); setHarmonyColors(generateHarmonyPalette(id)); }}
-                      title={mood.name}>
-                      {mood.icon}
-                    </button>
-                  ))}
-                </div>
-                {harmonyColors && (
-                  <div className="flex gap-1">
-                    {harmonyColors.map((c, i) => (
-                      <button key={i} className="w-6 h-6 rounded border hover:scale-125 transition-transform"
-                        style={{ backgroundColor: c, borderColor: theme.border }}
-                        onClick={() => handleColorChange(c)} title={c} />
-                    ))}
-                    <button className="text-xs px-1 rounded hover:opacity-70" style={{ color: theme.textSecondary }}
-                      onClick={() => setHarmonyColors(generateHarmonyPalette(harmonyMood))}>🔄</button>
-                  </div>
-                )}
-              </div>
-            </div>
+            <ColorPickerContent
+              drawing={state.drawing}
+              theme={theme}
+              activePalette={activePalette}
+              setActivePalette={setActivePalette}
+              harmonyMood={harmonyMood}
+              setHarmonyMood={setHarmonyMood}
+              harmonyColors={harmonyColors}
+              setHarmonyColors={setHarmonyColors}
+              onColorChange={handleColorChange}
+            />
           </DropdownButton>
 
           <div className={TOOLBAR.groupDivider} style={{ backgroundColor: theme.border }} />
@@ -425,93 +360,8 @@ const Toolbar = ({ onToggleRefPanel, showRefPanel }) => {
             🔒
           </button>
 
-          {/* Gap fill slider (visible when fill tool active) */}
-          {state.drawing.tool === 'fill' && (
-            <div className={TOOLBAR.group + ' gap-2'}>
-              <span className={TOOLBAR.sliderLabel} title="Fermeture de gaps dans l'encrage">Gap:</span>
-              <input type="range" min="0" max="10" value={state.drawing.fillGapSize ?? 0}
-                onChange={(e) => dispatch({ type: ACTIONS.SET_DRAWING_SETTINGS, payload: { fillGapSize: parseInt(e.target.value) } })}
-                className={TOOLBAR.slider} />
-              <span className={TOOLBAR.sliderLabel} style={{ minWidth: '18px' }}>{state.drawing.fillGapSize ?? 0}px</span>
-            </div>
-          )}
-
-          {/* Speed lines params */}
-          {state.drawing.tool === 'speedlines' && (
-            <div className={TOOLBAR.group + ' gap-2'}>
-              <span className={TOOLBAR.sliderLabel}>Lignes:</span>
-              <input type="range" min="10" max="300" value={state.drawing.speedlinesCount ?? 80}
-                onChange={(e) => dispatch({ type: ACTIONS.SET_DRAWING_SETTINGS, payload: { speedlinesCount: parseInt(e.target.value) } })}
-                className={TOOLBAR.slider} />
-              <span className={TOOLBAR.sliderLabel} style={{ minWidth: '24px' }}>{state.drawing.speedlinesCount ?? 80}</span>
-            </div>
-          )}
-
-          {/* Focus lines params */}
-          {state.drawing.tool === 'focuslines' && (
-            <div className={TOOLBAR.group + ' gap-2'}>
-              <span className={TOOLBAR.sliderLabel}>Lignes:</span>
-              <input type="range" min="20" max="300" value={state.drawing.focuslinesCount ?? 120}
-                onChange={(e) => dispatch({ type: ACTIONS.SET_DRAWING_SETTINGS, payload: { focuslinesCount: parseInt(e.target.value) } })}
-                className={TOOLBAR.slider} />
-              <span className={TOOLBAR.sliderLabel} style={{ minWidth: '24px' }}>{state.drawing.focuslinesCount ?? 120}</span>
-            </div>
-          )}
-
-          {/* Screentone params */}
-          {state.drawing.tool === 'screentone' && (
-            <>
-              <div className={TOOLBAR.group + ' gap-2'}>
-                <span className={TOOLBAR.sliderLabel}>LPI:</span>
-                <input type="range" min="20" max="85" value={state.drawing.screentoneLPI ?? 55}
-                  onChange={(e) => dispatch({ type: ACTIONS.SET_DRAWING_SETTINGS, payload: { screentoneLPI: parseInt(e.target.value) } })}
-                  className={TOOLBAR.slider} />
-                <span className={TOOLBAR.sliderLabel} style={{ minWidth: '24px' }}>{state.drawing.screentoneLPI ?? 55}</span>
-              </div>
-              <div className={TOOLBAR.group + ' gap-2'}>
-                <span className={TOOLBAR.sliderLabel}>Densité:</span>
-                <input type="range" min="5" max="80" value={state.drawing.screentoneDensity ?? 30}
-                  onChange={(e) => dispatch({ type: ACTIONS.SET_DRAWING_SETTINGS, payload: { screentoneDensity: parseInt(e.target.value) } })}
-                  className={TOOLBAR.slider} />
-                <span className={TOOLBAR.sliderLabel} style={{ minWidth: '24px' }}>{state.drawing.screentoneDensity ?? 30}%</span>
-              </div>
-            </>
-          )}
-
-          {/* Gradient controls */}
-          {state.drawing.tool === 'gradient' && (
-            <div className={TOOLBAR.group + ' gap-2'}>
-              <button className={TOOLBAR.button} style={getActiveStyle(state.drawing.gradientType === 'linear')}
-                onClick={() => dispatch({ type: ACTIONS.SET_DRAWING_SETTINGS, payload: { gradientType: 'linear' } })}
-                title="Linéaire">━</button>
-              <button className={TOOLBAR.button} style={getActiveStyle(state.drawing.gradientType === 'radial')}
-                onClick={() => dispatch({ type: ACTIONS.SET_DRAWING_SETTINGS, payload: { gradientType: 'radial' } })}
-                title="Radial">◎</button>
-
-              <div className={TOOLBAR.groupDivider} style={{ backgroundColor: theme.border }} />
-
-              {/* Color A (current) → Color B selector */}
-              <div className="flex items-center gap-1">
-                <div className="w-6 h-6 rounded border" style={{ backgroundColor: state.drawing.color, borderColor: theme.border }} title="Couleur A (début)" />
-                <span className="text-xs opacity-50">→</span>
-                <div className="relative">
-                  <input type="color"
-                    value={state.drawing.gradientSecondColor || '#ffffff'}
-                    onChange={(e) => dispatch({ type: ACTIONS.SET_DRAWING_SETTINGS, payload: { gradientSecondColor: e.target.value } })}
-                    className="w-6 h-6 rounded border cursor-pointer"
-                    style={{ borderColor: theme.border }}
-                    title="Couleur B (fin)"
-                  />
-                </div>
-                <button className="text-xs px-1 rounded transition-all hover:opacity-80"
-                  style={{ color: theme.textSecondary, border: `1px solid ${theme.border}` }}
-                  onClick={() => dispatch({ type: ACTIONS.SET_DRAWING_SETTINGS, payload: { gradientSecondColor: null } })}
-                  title="Couleur B → Transparent">
-                  ∅
-                </button>
-              </div>
-            </div>
-          )}
+          {/* Options conditionnelles par outil (gap/speed/focus/screentone/gradient) */}
+          <DrawingToolOptions drawing={state.drawing} dispatch={dispatch} theme={theme} getActiveStyle={getActiveStyle} />
 
           {/* Rotation controls */}
           <div className={TOOLBAR.group + ' gap-1'}>
@@ -576,93 +426,14 @@ const Toolbar = ({ onToggleRefPanel, showRefPanel }) => {
       </div>
 
       {/* === BRUSH CREATOR MODAL === */}
-      {showBrushCreator && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowBrushCreator(false)}>
-          <div className="rounded-xl shadow-2xl w-96 p-5" style={{ backgroundColor: theme.surface, color: theme.text }}
-            onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-base font-semibold mb-4">✨ Créer une brush</h3>
-
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs opacity-70 block mb-1">Nom</label>
-                <input type="text" value={newBrush.name} onChange={(e) => setNewBrush({ ...newBrush, name: e.target.value })}
-                  placeholder="Ma super brush" className="w-full px-3 py-2 text-sm rounded border"
-                  style={{ backgroundColor: theme.bg, borderColor: theme.border, color: theme.text }} />
-              </div>
-
-              <div>
-                <label className="text-xs opacity-70 block mb-1">Forme</label>
-                <select value={newBrush.shape} onChange={(e) => setNewBrush({ ...newBrush, shape: e.target.value })}
-                  className="w-full px-3 py-2 text-sm rounded border"
-                  style={{ backgroundColor: theme.bg, borderColor: theme.border, color: theme.text }}>
-                  <option value="circle">Cercle</option>
-                  <option value="square">Carré</option>
-                  <option value="ellipse">Ellipse</option>
-                  <option value="rectangle">Rectangle</option>
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs opacity-70 block mb-1">Angle ({newBrush.angle}°)</label>
-                  <input type="range" min="0" max="180" value={newBrush.angle}
-                    onChange={(e) => setNewBrush({ ...newBrush, angle: parseInt(e.target.value) })} className="w-full" />
-                </div>
-                <div>
-                  <label className="text-xs opacity-70 block mb-1">Ratio ({newBrush.ratio})</label>
-                  <input type="range" min="0.05" max="1" step="0.05" value={newBrush.ratio}
-                    onChange={(e) => setNewBrush({ ...newBrush, ratio: parseFloat(e.target.value) })} className="w-full" />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs opacity-70 block mb-1">Douceur ({newBrush.softness})</label>
-                <input type="range" min="0" max="1" step="0.05" value={newBrush.softness}
-                  onChange={(e) => setNewBrush({ ...newBrush, softness: parseFloat(e.target.value) })} className="w-full" />
-              </div>
-
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={newBrush.pressureSize}
-                    onChange={(e) => setNewBrush({ ...newBrush, pressureSize: e.target.checked })} />
-                  Pression → Taille
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={newBrush.pressureOpacity}
-                    onChange={(e) => setNewBrush({ ...newBrush, pressureOpacity: e.target.checked })} />
-                  Pression → Opacité
-                </label>
-              </div>
-
-              {/* Preview */}
-              <div className="flex justify-center py-3">
-                <div className="relative" style={{ width: 60, height: 60 }}>
-                  <div style={{
-                    width: 40,
-                    height: 40 * (newBrush.ratio || 1),
-                    borderRadius: newBrush.shape === 'circle' || newBrush.shape === 'ellipse' ? '50%' : '0',
-                    backgroundColor: theme.text,
-                    transform: `rotate(${newBrush.angle || 0}deg)`,
-                    position: 'absolute',
-                    top: '50%', left: '50%',
-                    marginTop: -20 * (newBrush.ratio || 1),
-                    marginLeft: -20,
-                    opacity: newBrush.softness > 0 ? 0.5 : 1,
-                    filter: newBrush.softness > 0 ? `blur(${newBrush.softness * 8}px)` : 'none',
-                  }} />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 mt-4">
-              <button className="px-4 py-2 text-sm rounded-lg border" style={{ borderColor: theme.border }}
-                onClick={() => setShowBrushCreator(false)}>Annuler</button>
-              <button className="px-4 py-2 text-sm rounded-lg text-white" style={{ backgroundColor: theme.primary }}
-                onClick={handleCreateBrush}>Créer</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <BrushCreatorModal
+        show={showBrushCreator}
+        newBrush={newBrush}
+        setNewBrush={setNewBrush}
+        onCreate={handleCreateBrush}
+        onClose={() => setShowBrushCreator(false)}
+        theme={theme}
+      />
     </div>
   );
 };
