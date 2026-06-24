@@ -4,15 +4,12 @@
 // ============================================
 import React, { useEffect, useState } from 'react';
 import { useStudio, ACTIONS } from '../../../context/StudioContext';
-import { pointOnEllipse } from '../../../utils/helpers';
+import { cloudPath, shoutPath, wavyPath } from './bubblePaths';
+import { getBubbleGeometry } from './bubbleGeometry';
 
 const BubbleShape = ({ bubble }) => {
   const { dispatch } = useStudio();
-  const { 
-    width, height, backgroundColor, borderColor, borderWidth, type, 
-    image, imageOpacity, imageX, imageY, imageScaleX, imageScaleY, 
-    tailAngle, tailWidth: bubbleTailWidth, tailLength 
-  } = bubble;
+  const { type, width, height, image, imageOpacity, borderColor, borderWidth } = bubble;
 
   // State local pour les dimensions de l'image
   const [naturalSize, setNaturalSize] = useState(null);
@@ -29,7 +26,7 @@ const BubbleShape = ({ bubble }) => {
       const w = img.naturalWidth;
       const h = img.naturalHeight;
       setNaturalSize({ w, h });
-      
+
       if (!bubble.originalImageWidth) {
         dispatch({
           type: ACTIONS.UPDATE_BUBBLE,
@@ -44,101 +41,24 @@ const BubbleShape = ({ bubble }) => {
     img.src = image;
   }, [image, bubble.id, bubble.originalImageWidth, dispatch]);
 
-  // === CONSTANTES ===
-  const cx = width / 2;
-  const cy = height / 2;
-  const rx = width / 2;
-  const ry = height / 2;
-  const angle = tailAngle || 180;
-  const tLength = tailLength !== undefined ? tailLength : 50;
-  const tWidth = bubbleTailWidth || 20;
-  
-  const bgColor = type === 'narration' && backgroundColor === '#ffffff' ? '#fef9c3' : backgroundColor;
-  const offset = type === 'narration' ? 0 : 250;
-  const clipId = `clip-bubble-${bubble.id}`;
-
-  // === CALCUL DE LA QUEUE ===
-  const angleRad = angle * (Math.PI / 180);
-  const perpAngle = angleRad + Math.PI / 2;
-  
-  // Point sur le bord de l'ellipse
-  const edgePoint = pointOnEllipse(cx, cy, rx * 0.95, ry * 0.95, angle);
-  // Point de la pointe de la queue
-  const tipPoint = pointOnEllipse(cx, cy, rx + tLength, ry + tLength, angle);
-  
-  // Points de base de la queue (sur le bord de la forme)
-  const base1 = { 
-    x: edgePoint.x + (tWidth / 2) * Math.cos(perpAngle), 
-    y: edgePoint.y + (tWidth / 2) * Math.sin(perpAngle) 
-  };
-  const base2 = { 
-    x: edgePoint.x - (tWidth / 2) * Math.cos(perpAngle), 
-    y: edgePoint.y - (tWidth / 2) * Math.sin(perpAngle) 
-  };
-
-  // === IMAGE DIMENSIONS ===
-  const getImageDimensions = () => {
-    const origW = naturalSize?.w || bubble.originalImageWidth || width;
-    const origH = naturalSize?.h || bubble.originalImageHeight || height;
-    const scaleX = imageScaleX || 1;
-    const scaleY = imageScaleY || 1;
-    
-    const displayW = origW * scaleX;
-    const displayH = origH * scaleY;
-    
-    const imgX = (width / 2) - (displayW / 2) + (imageX || 0);
-    const imgY = (height / 2) - (displayH / 2) + (imageY || 0);
-    
-    return { imgX, imgY, displayW, displayH };
-  };
-
-  const imageDims = image ? getImageDimensions() : null;
-
-  // === SVG DIMENSIONS ===
-  const svgWidth = width + (type === 'narration' ? 0 : 500);
-  const svgHeight = height + (type === 'narration' ? 0 : 500);
-
-  // === GÉNÉRATION DES FORMES ===
-
-  // Path nuage pour pensée
-  const cloudPath = (centerX, centerY, radiusX, radiusY, bumps = 10) => {
-    let d = '';
-    const bumpSize = 0.15;
-    
-    for (let i = 0; i < bumps; i++) {
-      const angle1 = (i / bumps) * Math.PI * 2;
-      const angle2 = ((i + 1) / bumps) * Math.PI * 2;
-      const midAngle = (angle1 + angle2) / 2;
-      
-      const x1 = centerX + radiusX * Math.cos(angle1);
-      const y1 = centerY + radiusY * Math.sin(angle1);
-      const x2 = centerX + radiusX * Math.cos(angle2);
-      const y2 = centerY + radiusY * Math.sin(angle2);
-      
-      // Point de contrôle pour la bosse
-      const cpX = centerX + radiusX * (1 + bumpSize) * Math.cos(midAngle);
-      const cpY = centerY + radiusY * (1 + bumpSize) * Math.sin(midAngle);
-      
-      if (i === 0) {
-        d = `M ${x1} ${y1}`;
-      }
-      d += ` Q ${cpX} ${cpY} ${x2} ${y2}`;
-    }
-    d += ' Z';
-    return d;
-  };
+  // Géométrie (queue, ellipse, dimensions image) — calcul pur
+  const {
+    cx, cy, rx, ry, offset, clipId, bgColor,
+    edgePoint, tipPoint, base1, base2, perpAngle,
+    svgWidth, svgHeight, imageDims,
+  } = getBubbleGeometry(bubble, naturalSize);
 
   // Cercles de queue pour pensée
   const renderThoughtTail = () => {
     const circles = [];
     const numCircles = 3;
-    
+
     for (let i = 0; i < numCircles; i++) {
       const t = 0.3 + (i * 0.25);
       const x = edgePoint.x + (tipPoint.x - edgePoint.x) * t;
       const y = edgePoint.y + (tipPoint.y - edgePoint.y) * t;
       const radius = 10 - i * 3;
-      
+
       circles.push(
         <circle
           key={`thought-${i}`}
@@ -154,62 +74,16 @@ const BubbleShape = ({ bubble }) => {
     return circles;
   };
 
-  // Path zigzag pour cri
-  const shoutPath = (centerX, centerY, radiusX, radiusY, spikes = 12) => {
-    let d = '';
-    const spikeDepth = 0.25;
-    
-    for (let i = 0; i < spikes * 2; i++) {
-      const angle = (i / (spikes * 2)) * Math.PI * 2;
-      const isSpike = i % 2 === 0;
-      const r = isSpike ? 1 + spikeDepth : 1 - spikeDepth * 0.3;
-      
-      const x = centerX + radiusX * r * Math.cos(angle);
-      const y = centerY + radiusY * r * Math.sin(angle);
-      
-      if (i === 0) {
-        d = `M ${x} ${y}`;
-      } else {
-        d += ` L ${x} ${y}`;
-      }
-    }
-    d += ' Z';
-    return d;
-  };
-
-  // Path ondulé pour chant
-  const wavyPath = (centerX, centerY, radiusX, radiusY, waves = 6) => {
-    const segments = waves * 8;
-    let d = '';
-    
-    for (let i = 0; i <= segments; i++) {
-      const angle = (i / segments) * Math.PI * 2;
-      const waveOffset = Math.sin(angle * waves * 2) * 0.06;
-      const r = 1 + waveOffset;
-      
-      const x = centerX + radiusX * r * Math.cos(angle);
-      const y = centerY + radiusY * r * Math.sin(angle);
-      
-      if (i === 0) {
-        d = `M ${x} ${y}`;
-      } else {
-        d += ` L ${x} ${y}`;
-      }
-    }
-    d += ' Z';
-    return d;
-  };
-
   // Queue éclair pour radio
   const lightningTailPath = () => {
     const mid1X = edgePoint.x + (tipPoint.x - edgePoint.x) * 0.4;
     const mid1Y = edgePoint.y + (tipPoint.y - edgePoint.y) * 0.4;
     const mid2X = edgePoint.x + (tipPoint.x - edgePoint.x) * 0.6;
     const mid2Y = edgePoint.y + (tipPoint.y - edgePoint.y) * 0.6;
-    
+
     const perpX = Math.cos(perpAngle) * 6;
     const perpY = Math.sin(perpAngle) * 6;
-    
+
     return `M ${base1.x + offset} ${base1.y + offset}
             L ${mid1X + perpX + offset} ${mid1Y + perpY + offset}
             L ${mid1X - perpX * 0.5 + offset} ${mid1Y - perpY * 0.5 + offset}
