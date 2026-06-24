@@ -4,10 +4,11 @@
 // ============================================
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { useStudio, ACTIONS } from '../../context/StudioContext';
 import { PANEL, cn } from '../../styles/tailwind';
 import { snapToGrid, clamp } from '../../utils/helpers';
+import PanelShape from './PanelShape';
+import PanelContextMenu from './PanelContextMenu';
 
 const Panel = ({ panel, pageWidth, pageHeight }) => {
   const { state, dispatch, theme } = useStudio();
@@ -39,66 +40,6 @@ const Panel = ({ panel, pageWidth, pageHeight }) => {
       width: e.target.naturalWidth,
       height: e.target.naturalHeight
     });
-  };
-
-  // --- GÉNÉRATEUR DE FORMES ---
-  const getPanelShapePath = (width, height, type) => {
-    const w = width;
-    const h = height;
-
-    switch (type) {
-      case 'trapezoid': return `M ${w * 0.2},0 L ${w * 0.8},0 L ${w},${h} L 0,${h} Z`;
-      case 'parallelogram': return `M ${w * 0.25},0 L ${w},0 L ${w * 0.75},${h} L 0,${h} Z`;
-      case 'hexagon': return `M ${w * 0.25},0 L ${w * 0.75},0 L ${w},${h / 2} L ${w * 0.75},${h} L ${w * 0.25},${h} L 0,${h / 2} Z`;
-      case 'octagon': 
-        const s = Math.min(w, h) * 0.3;
-        return `M ${s},0 L ${w - s},0 L ${w},${s} L ${w},${h - s} L ${w - s},${h} L ${s},${h} L 0,${h - s} L 0,${s} Z`;
-      case 'star': {
-        const cx = w / 2; const cy = h / 2;
-        const outerRadius = Math.min(w, h) / 2;
-        const innerRadius = outerRadius / 2.5;
-        let path = '';
-        for (let i = 0; i < 10; i++) {
-          const r = i % 2 === 0 ? outerRadius : innerRadius;
-          const angle = (Math.PI / 5) * i - Math.PI / 2;
-          const x = cx + Math.cos(angle) * r;
-          const y = cy + Math.sin(angle) * r;
-          path += (i === 0 ? `M ${x},${y}` : ` L ${x},${y}`);
-        }
-        return path + ' Z';
-      }
-      case 'burst':
-      case 'shout':
-      case 'explosion': {
-        const bcx = w / 2; const bcy = h / 2;
-        const bOuter = Math.min(w, h) / 2;
-        const bInner = bOuter * 0.6;
-        let bPath = '';
-        for (let i = 0; i < 16; i++) {
-          const angle = (Math.PI * 2 * i) / 16 - Math.PI / 2;
-          const r = i % 2 === 0 ? bOuter : bInner;
-          const x = bcx + Math.cos(angle) * r;
-          const y = bcy + Math.sin(angle) * r;
-          bPath += (i === 0 ? `M ${x},${y}` : ` L ${x},${y}`);
-        }
-        return bPath + ' Z';
-      }
-      case 'cloud':
-        return `M ${w*0.2},${h*0.8} Q ${w*0.1},${h*0.5} ${w*0.3},${h*0.4} Q ${w*0.4},${h*0.1} ${w*0.6},${h*0.4} Q ${w*0.9},${h*0.3} ${w*0.9},${h*0.6} Q ${w},${h*0.9} ${w*0.7},${h*0.9} Q ${w*0.4},${h} ${w*0.2},${h*0.8} Z`;
-      case 'torn':
-        let tPath = `M 0,0 L ${w},0 L ${w},${h*0.85} `;
-        const steps = 12;
-        const stepW = w / steps;
-        for(let i=1; i<=steps; i++) {
-           const x = w - (i * stepW);
-           const y = (i % 2 === 0) ? h * 0.85 : h;
-           tPath += `L ${x},${y} `;
-        }
-        return tPath + `L 0,${h*0.85} Z`;
-      case 'diagonal-left': return `M ${w * 0.15},0 L ${w},0 L ${w},${h} L 0,${h} Z`;
-      case 'diagonal-right': return `M 0,0 L ${w * 0.85},0 L ${w},${h} L 0,${h} Z`;
-      default: return null;
-    }
   };
 
   // --- HANDLERS ---
@@ -187,7 +128,7 @@ const Panel = ({ panel, pageWidth, pageHeight }) => {
       };
       return;
     }
-    
+
     setIsDragging(true);
     // SAUVEGARDE DIMENSIONS AU CLICK
     dragStartRef.current = {
@@ -224,17 +165,17 @@ const Panel = ({ panel, pageWidth, pageHeight }) => {
       x: e.clientX, y: e.clientY,
       scaleX: panel.imageScaleX || 1, scaleY: panel.imageScaleY || 1,
       imageX: panel.imageX || 0, imageY: panel.imageY || 0,
-      originalW: panel.originalImageWidth || 100 
+      originalW: panel.originalImageWidth || 100
     };
   }, [isLocked, panel]);
 
   // --- LOGIQUE DE DÉPLACEMENT ---
   useEffect(() => {
     if (!isDragging && !isResizing && !isDraggingImage && !isResizingImage) return;
-    
+
     const handleMouseMove = (e) => {
       const zoom = state.zoom;
-      
+
       if (isDragging) {
         const dx = (e.clientX - dragStartRef.current.x) / zoom;
         const dy = (e.clientY - dragStartRef.current.y) / zoom;
@@ -249,7 +190,7 @@ const Panel = ({ panel, pageWidth, pageHeight }) => {
         }
         newX = clamp(newX, 0, pageWidth - currentWidth);
         newY = clamp(newY, 0, pageHeight - currentHeight);
-        
+
         dispatch({ type: ACTIONS.UPDATE_PANEL, payload: { id: panel.id, updates: { x: newX, y: newY }, skipHistory: true } });
       }
 
@@ -258,7 +199,7 @@ const Panel = ({ panel, pageWidth, pageHeight }) => {
         const dy = (e.clientY - imageDragStartRef.current.y) / zoom;
         dispatch({ type: ACTIONS.UPDATE_PANEL, payload: { id: panel.id, updates: { imageX: imageDragStartRef.current.imageX + dx, imageY: imageDragStartRef.current.imageY + dy }, skipHistory: true } });
       }
-      
+
       if (isResizing) {
         const dx = (e.clientX - resizeStartRef.current.x) / zoom;
         const dy = (e.clientY - resizeStartRef.current.y) / zoom;
@@ -266,7 +207,7 @@ const Panel = ({ panel, pageWidth, pageHeight }) => {
         let newY = resizeStartRef.current.panelY;
         let newWidth = resizeStartRef.current.width;
         let newHeight = resizeStartRef.current.height;
-        
+
         switch (resizeHandle) {
           case 'n': newY += dy; newHeight -= dy; break;
           case 's': newHeight += dy; break;
@@ -277,11 +218,11 @@ const Panel = ({ panel, pageWidth, pageHeight }) => {
           case 'se': newWidth += dx; newHeight += dy; break;
           case 'sw': newX += dx; newWidth -= dx; newHeight += dy; break;
         }
-        
+
         const minSize = 30;
         if (newWidth < minSize) { if (resizeHandle.includes('w')) newX = resizeStartRef.current.panelX + resizeStartRef.current.width - minSize; newWidth = minSize; }
         if (newHeight < minSize) { if (resizeHandle.includes('n')) newY = resizeStartRef.current.panelY + resizeStartRef.current.height - minSize; newHeight = minSize; }
-        
+
         if (state.snapToGrid) { newX = snapToGrid(newX); newY = snapToGrid(newY); newWidth = snapToGrid(newWidth); newHeight = snapToGrid(newHeight); }
         dispatch({ type: ACTIONS.UPDATE_PANEL, payload: { id: panel.id, updates: { x: newX, y: newY, width: newWidth, height: newHeight }, skipHistory: true } });
       }
@@ -310,7 +251,7 @@ const Panel = ({ panel, pageWidth, pageHeight }) => {
         dispatch({ type: ACTIONS.UPDATE_PANEL, payload: { id: panel.id, updates: { imageScaleX: Math.max(0.1, newScaleX), imageScaleY: Math.max(0.1, newScaleY) }, skipHistory: true } });
       }
     };
-    
+
     const handleMouseUp = () => {
       if (isDragging) dispatch({ type: ACTIONS.SAVE_HISTORY, payload: 'Déplacer case' });
       if (isResizing) dispatch({ type: ACTIONS.SAVE_HISTORY, payload: 'Redimensionner case' });
@@ -318,73 +259,13 @@ const Panel = ({ panel, pageWidth, pageHeight }) => {
       if (isResizingImage) dispatch({ type: ACTIONS.SAVE_HISTORY, payload: 'Redimensionner image' });
       setIsDragging(false); setIsResizing(false); setIsDraggingImage(false); setIsResizingImage(false); setResizeHandle(null);
     };
-    
+
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
     return () => { window.removeEventListener('mousemove', handleMouseMove); window.removeEventListener('mouseup', handleMouseUp); };
-  }, [isDragging, isResizing, isDraggingImage, isResizingImage, resizeHandle, pageWidth, pageHeight, state.zoom, state.snapToGrid, dispatch, panel.id]); 
+  }, [isDragging, isResizing, isDraggingImage, isResizingImage, resizeHandle, pageWidth, pageHeight, state.zoom, state.snapToGrid, dispatch, panel.id]);
 
   // --- RENDU ---
-  const renderPanelContent = () => {
-    const { image, imageScaleX = 1, imageScaleY = 1, imageX = 0, imageY = 0, backgroundColor, imageOpacity = 1 } = panel;
-    return (
-      <div 
-        style={{ 
-            width: '100%', height: '100%', 
-            backgroundColor, overflow: 'hidden', position: 'relative',
-            pointerEvents: 'auto'
-        }}
-      >
-        {image && (
-          <img
-            src={image}
-            onLoad={handleImageLoad}
-            alt="Panel content"
-            style={{
-              position: 'absolute', left: '50%', top: '50%',
-              transform: `translate(-50%, -50%) translate(${imageX}px, ${imageY}px) scale(${imageScaleX}, ${imageScaleY})`,
-              maxWidth: 'none', pointerEvents: 'none', userSelect: 'none',
-              opacity: imageOpacity
-            }}
-          />
-        )}
-      </div>
-    );
-  };
-  
-  const renderPanelShape = () => {
-    const { type, width, height, borderWidth, borderColor, borderRadius, borderStyle, backgroundColor } = panel;
-    const pathD = getPanelShapePath(width, height, type);
-    
-    if (!pathD) {
-       let style = { 
-           width: '100%', height: '100%', 
-           border: `${borderWidth}px ${borderStyle || 'solid'} ${borderColor}`, 
-           overflow: 'hidden', 
-           backgroundColor: backgroundColor,
-           pointerEvents: 'auto'
-       };
-       if (type === 'circle' || type === 'ellipse') style.borderRadius = '50%';
-       if (type === 'rounded') style.borderRadius = borderRadius || 20;
-       return <div style={style}>{renderPanelContent()}</div>;
-    }
-
-    return (
-        <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-          <svg width={width} height={height} style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}>
-            <path d={pathD} fill={backgroundColor || 'white'} pointerEvents="auto" /> 
-          </svg>
-          <svg width={width} height={height} style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}><defs><clipPath id={`clip-${panel.id}`}><path d={pathD} /></clipPath></defs></svg>
-          <div style={{ width: '100%', height: '100%', clipPath: `url(#clip-${panel.id})`, pointerEvents: 'auto' }}>
-             {renderPanelContent()}
-          </div>
-          <svg width={width} height={height} style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}>
-            <path d={pathD} fill="none" stroke={borderColor} strokeWidth={borderWidth} strokeDasharray={borderStyle === 'dashed' ? '10,5' : borderStyle === 'dotted' ? '3,3' : 'none'} />
-          </svg>
-        </div>
-    );
-  };
-
   const handles = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
   const imageHandles = ['n', 's', 'e', 'w'];
   const imgW = (imageDimensions.width || 0) * (panel.imageScaleX || 1);
@@ -412,89 +293,21 @@ const Panel = ({ panel, pageWidth, pageHeight }) => {
       onDoubleClick={handleDoubleClick}
       onContextMenu={handleContextMenu}
     >
-      {renderPanelShape()}
+      <PanelShape panel={panel} onImageLoad={handleImageLoad} />
 
-      {/* Context menu — portal to body */}
-      {contextMenu && createPortal(
-        <div
-          className="fixed py-1.5 rounded-lg shadow-2xl border min-w-44"
-          style={{
-            left: contextMenu.x,
-            top: contextMenu.y,
-            zIndex: 99999,
-            backgroundColor: theme.surface,
-            borderColor: theme.border,
-            color: theme.text,
-          }}
-          onMouseDown={(e) => e.stopPropagation()}
-        >
-          <div
-            className="px-4 py-2.5 text-sm flex items-center gap-3 cursor-pointer rounded-md mx-1 transition-colors"
-            style={{ backgroundColor: 'transparent' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.selection}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            onClick={handleRenameStart}
-          >
-            <span>✏️</span>
-            <span>Renommer</span>
-          </div>
-        </div>,
-        document.body
-      )}
+      <PanelContextMenu
+        contextMenu={contextMenu}
+        isRenaming={isRenaming}
+        theme={theme}
+        renameValue={renameValue}
+        renameInputRef={renameInputRef}
+        onRenameStart={handleRenameStart}
+        onRenameChange={setRenameValue}
+        onRenameKeyDown={handleRenameKeyDown}
+        onRenameConfirm={handleRenameConfirm}
+        onRenameCancel={() => setIsRenaming(false)}
+      />
 
-      {/* Rename overlay — portal to body */}
-      {isRenaming && createPortal(
-        <div
-          className="fixed inset-0 flex items-center justify-center"
-          style={{ zIndex: 99998, backgroundColor: 'rgba(0,0,0,0.35)' }}
-          onMouseDown={(e) => {
-            e.stopPropagation();
-            handleRenameConfirm();
-          }}
-        >
-          <div
-            className="rounded-xl shadow-2xl p-4 flex flex-col gap-3 items-center"
-            style={{ backgroundColor: theme.surface, borderColor: theme.border, border: `1px solid ${theme.border}`, minWidth: 260 }}
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <span className="text-sm font-semibold" style={{ color: theme.text }}>
-              Renommer la case
-            </span>
-            <input
-              ref={renameInputRef}
-              type="text"
-              value={renameValue}
-              onChange={(e) => setRenameValue(e.target.value)}
-              onKeyDown={handleRenameKeyDown}
-              className="w-full px-3 py-2 text-sm rounded-lg border focus:outline-none focus:ring-2 focus:ring-current focus:ring-opacity-40"
-              style={{
-                backgroundColor: theme.bg,
-                borderColor: theme.border,
-                color: theme.text,
-              }}
-              placeholder="Nom de la case..."
-            />
-            <div className="flex gap-2 w-full">
-              <button
-                className="flex-1 px-3 py-1.5 text-sm rounded-lg border transition-colors"
-                style={{ borderColor: theme.border, color: theme.textSecondary }}
-                onMouseDown={(e) => { e.stopPropagation(); setIsRenaming(false); }}
-              >
-                Annuler
-              </button>
-              <button
-                className="flex-1 px-3 py-1.5 text-sm rounded-lg text-white transition-colors"
-                style={{ backgroundColor: theme.primary }}
-                onMouseDown={(e) => { e.stopPropagation(); handleRenameConfirm(); }}
-              >
-                OK
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
-      
       {isSelected && !isLocked && !isEditingImage && (
         <div className={PANEL.handles} style={{ pointerEvents: 'none' }}>
           {handles.map(handle => (
