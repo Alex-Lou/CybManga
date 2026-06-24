@@ -1,13 +1,19 @@
 package com.mangastudio.controller;
 
-import com.mangastudio.entity.Project;
+import com.mangastudio.dto.AutosaveRequest;
+import com.mangastudio.dto.ProjectRequest;
+import com.mangastudio.dto.ProjectResponse;
+import com.mangastudio.dto.ProjectSummaryResponse;
 import com.mangastudio.service.ProjectService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -16,55 +22,41 @@ public class ProjectController {
 
     private final ProjectService projectService;
 
-    /**
-     * Liste tous les projets (sans le stateJson pour performance).
-     */
+    /** Liste les projets (résumé sans stateJson), du plus récent au plus ancien. Borné (100 par défaut). */
     @GetMapping("/projects")
-    public List<Map<String, Object>> getAllProjects() {
-        return projectService.getAllProjectsSummary();
+    public List<ProjectSummaryResponse> getAllProjects(
+            @PageableDefault(size = 100, sort = "updatedAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return projectService.getProjectsSummary(pageable);
     }
 
-    /**
-     * Charge un projet complet avec son state JSON.
-     */
+    /** Charge un projet complet (avec son stateJson). */
     @GetMapping("/projects/{id}")
-    public Project getProject(@PathVariable Long id) {
+    public ProjectResponse getProject(@PathVariable Long id) {
         return projectService.getProjectById(id);
     }
 
-    /**
-     * Crée un nouveau projet.
-     * Body: { "name": "...", "stateJson": "{...}" }
-     */
+    /** Crée un nouveau projet. */
     @PostMapping("/projects")
-    public Project createProject(@RequestBody Project project) {
-        return projectService.createProject(project);
+    public ProjectResponse createProject(@Valid @RequestBody ProjectRequest request) {
+        return projectService.createProject(request);
     }
 
-    /**
-     * Sauvegarde (met à jour) un projet existant.
-     * Body: { "name": "...", "stateJson": "{...}" }
-     */
+    /** Met à jour un projet existant. */
     @PutMapping("/projects/{id}")
-    public Project updateProject(@PathVariable Long id, @RequestBody Project project) {
-        return projectService.updateProject(id, project);
+    public ProjectResponse updateProject(@PathVariable Long id, @Valid @RequestBody ProjectRequest request) {
+        return projectService.updateProject(id, request);
     }
 
-    /**
-     * Supprime un projet.
-     */
+    /** Supprime un projet. */
     @DeleteMapping("/projects/{id}")
     public ResponseEntity<Void> deleteProject(@PathVariable Long id) {
         projectService.deleteProject(id);
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * Auto-save : sauvegarde rapide du state JSON courant.
-     * Si le projet n'existe pas encore (id null), le crée.
-     */
+    /** Auto-sauvegarde rapide du state courant : crée le projet si id absent. */
     @PostMapping("/projects/autosave")
-    public Project autosave(@RequestBody Map<String, Object> payload) {
-        return projectService.autosave(payload);
+    public ProjectResponse autosave(@RequestBody AutosaveRequest request) {
+        return projectService.autosave(request);
     }
 }
