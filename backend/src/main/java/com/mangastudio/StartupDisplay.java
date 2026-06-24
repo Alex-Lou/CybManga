@@ -7,7 +7,6 @@ import org.springframework.context.event.EventListener;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
-import java.net.InetAddress;
 import java.time.Duration;
 import java.time.Instant;
 
@@ -28,7 +27,6 @@ public class StartupDisplay {
             Duration startupTime = Duration.between(startTime, Instant.now());
 
             String port = env.getProperty("server.port", "8080");
-            String host = InetAddress.getLocalHost().getHostAddress();
             String context = env.getProperty("server.servlet.context-path", "");
             String activeProfile = env.getProperty("spring.profiles.active", "default");
 
@@ -43,10 +41,9 @@ public class StartupDisplay {
                     "     ✓ Profile ........................ " + activeProfile + "\n" +
                     "     ✓ Port ........................... " + port + "\n" +
                     "\n" +
-                    "  🌐 Access URLs:\n" +
+                    "  🌐 Access URLs (local uniquement):\n" +
                     "     • Backend:  http://localhost:" + port + context + "\n" +
                     "     • Swagger:  http://localhost:" + port + context + "/swagger-ui.html\n" +
-                    "     • Network:  http://" + host + ":" + port + context + "\n" +
                     "\n" +
                     "╚══════════════════════════════════════════════════════════════════════╝");
 

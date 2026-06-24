@@ -1,5 +1,8 @@
 server:
   port: 8080
+  # App desktop : le backend ne sert que le front local. On lie l'écoute à la
+  # boucle locale pour ne JAMAIS exposer l'API ni la console H2 sur le réseau (LAN).
+  address: 127.0.0.1
   error:
     include-message: always
     include-binding-errors: never
@@ -37,7 +40,9 @@ spring:
       enabled: true
       path: /h2-console
       settings:
-        web-allow-others: true
+        # Jamais d'accès distant à la console DB (déjà bloqué par server.address,
+        # ceci verrouille en défense en profondeur).
+        web-allow-others: false
 
   jpa:
     # AJOUT CRUCIAL : On force le dialecte pour éviter l'erreur "Unable to determine Dialect"
@@ -72,3 +77,9 @@ info:
     name: SumiWire
     description: Backend API for SumiWire
     version: 1.0.0
+
+# Origines CORS autorisées (front en dev). Externalisé pour ne pas coder en dur
+# dans CorsConfig — surchargeable par variable d'env APP_CORS_ALLOWED_ORIGINS.
+app:
+  cors:
+    allowed-origins: http://localhost:3000,http://localhost:5173
