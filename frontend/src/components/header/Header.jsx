@@ -8,9 +8,10 @@ import { HEADER, cn } from '../../styles/tailwind';
 import { VIEW_MODES } from '../../utils/constants';
 import { saveProjectWithDialog, readFileAsJSON, saveToStorage, exportAsImage } from '../../utils/helpers';
 import { listProjects, loadProject, deleteProject, deserializeState } from '../../utils/api';
-import { loadKeybindings, matchesBinding } from '../../utils/keybindings';
 import { importPsdFile } from '../../utils/psdImport';
 import { exportAsPsd } from '../../utils/psdExport';
+import { useHeaderShortcuts } from './useHeaderShortcuts';
+import ProjectListDialog from './ProjectListDialog';
 
 const Header = () => {
   const { state, dispatch, canUndo, canRedo, theme, doBackendSave } = useStudio();
@@ -116,63 +117,6 @@ const Header = () => {
     }
   };
 
-  // --- GESTION RACCOURCIS (customizable) ---
-  useEffect(() => {
-    const bindings = loadKeybindings();
-
-    const handleKeyDown = (e) => {
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
-
-      // Ctrl-based shortcuts
-      if (matchesBinding(e, bindings.save)) { e.preventDefault(); handleSave(); return; }
-      if (matchesBinding(e, bindings.newProject)) { e.preventDefault(); handleNew(); return; }
-      if (matchesBinding(e, bindings.undo)) { e.preventDefault(); if (canUndo) dispatch({ type: ACTIONS.UNDO }); return; }
-      if (matchesBinding(e, bindings.redo) || matchesBinding(e, bindings.redoAlt)) { e.preventDefault(); if (canRedo) dispatch({ type: ACTIONS.REDO }); return; }
-      if (matchesBinding(e, bindings.open)) { e.preventDefault(); fileInputRef.current?.click(); return; }
-      if (matchesBinding(e, bindings.copy)) { e.preventDefault(); dispatch({ type: ACTIONS.COPY }); return; }
-      if (matchesBinding(e, bindings.paste)) { e.preventDefault(); dispatch({ type: ACTIONS.PASTE }); return; }
-      if (matchesBinding(e, bindings.selectAll)) {
-        e.preventDefault();
-        const cp = state.pages[state.activePageIndex];
-        dispatch({ type: ACTIONS.SET_SELECTION, payload: { panelIds: cp.panels.map(p => p.id), bubbleIds: cp.bubbles.map(b => b.id) } });
-        return;
-      }
-      if (matchesBinding(e, bindings.zoomReset)) { e.preventDefault(); dispatch({ type: ACTIONS.SET_ZOOM, payload: 1 }); return; }
-      if (matchesBinding(e, bindings.zoomIn)) { e.preventDefault(); dispatch({ type: ACTIONS.SET_ZOOM, payload: Math.min(state.zoom + 0.1, 5) }); return; }
-      if (matchesBinding(e, bindings.zoomOut)) { e.preventDefault(); dispatch({ type: ACTIONS.SET_ZOOM, payload: Math.max(state.zoom - 0.1, 0.1) }); return; }
-
-      // Delete
-      if (matchesBinding(e, bindings.delete) || matchesBinding(e, bindings.deleteAlt)) {
-        if (state.editingImageId) {
-          dispatch({ type: ACTIONS.UPDATE_PANEL, payload: { id: state.editingImageId, updates: { image: null } } });
-          dispatch({ type: ACTIONS.SET_EDITING_IMAGE, payload: null });
-        } else {
-          if (state.selectedPanelIds.length > 0) dispatch({ type: ACTIONS.DELETE_PANELS });
-          if (state.selectedBubbleIds.length > 0) dispatch({ type: ACTIONS.DELETE_BUBBLES });
-        }
-        return;
-      }
-
-      // Non-ctrl shortcuts
-      if (matchesBinding(e, bindings.viewSingle)) { dispatch({ type: ACTIONS.SET_VIEW_MODE, payload: 'single' }); return; }
-      if (matchesBinding(e, bindings.viewSpread)) { dispatch({ type: ACTIONS.SET_VIEW_MODE, payload: 'spread' }); return; }
-      if (matchesBinding(e, bindings.viewAll)) { dispatch({ type: ACTIONS.SET_VIEW_MODE, payload: 'all' }); return; }
-      if (matchesBinding(e, bindings.toggleGuides)) { dispatch({ type: ACTIONS.TOGGLE_GUIDES }); return; }
-      if (matchesBinding(e, bindings.toggleGrid)) { dispatch({ type: ACTIONS.TOGGLE_GRID }); return; }
-      if (matchesBinding(e, bindings.toggleSnap)) { dispatch({ type: ACTIONS.TOGGLE_SNAP }); return; }
-      if (matchesBinding(e, bindings.select)) { dispatch({ type: ACTIONS.SET_TOOL, payload: 'select' }); return; }
-      if (matchesBinding(e, bindings.pan)) { dispatch({ type: ACTIONS.SET_TOOL, payload: state.activeTool === 'pan' ? 'select' : 'pan' }); return; }
-      if (matchesBinding(e, bindings.draw)) { dispatch({ type: ACTIONS.SET_TOOL, payload: state.activeTool === 'draw' ? 'select' : 'draw' }); return; }
-      if (matchesBinding(e, bindings.eraser)) { dispatch({ type: ACTIONS.SET_DRAWING_SETTINGS, payload: { tool: 'eraser' } }); dispatch({ type: ACTIONS.SET_TOOL, payload: 'draw' }); return; }
-      if (matchesBinding(e, bindings.brush)) { dispatch({ type: ACTIONS.SET_DRAWING_SETTINGS, payload: { tool: 'brush' } }); dispatch({ type: ACTIONS.SET_TOOL, payload: 'draw' }); return; }
-      if (matchesBinding(e, bindings.brushSize1)) { dispatch({ type: ACTIONS.SET_DRAWING_SETTINGS, payload: { size: Math.max(1, state.drawing.size - 2) } }); return; }
-      if (matchesBinding(e, bindings.brushSize2)) { dispatch({ type: ACTIONS.SET_DRAWING_SETTINGS, payload: { size: Math.min(100, state.drawing.size + 2) } }); return; }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [dispatch, canUndo, canRedo, state]);
-
   const handleOpen = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -231,6 +175,9 @@ const Header = () => {
     e.target.value = '';
     setActiveMenu(null);
   };
+
+  // Raccourcis clavier globaux (référence handleSave/handleNew définis ci-dessus)
+  useHeaderShortcuts({ state, dispatch, canUndo, canRedo, handleSave, handleNew, fileInputRef });
 
   const menus = {
     file: {
@@ -408,66 +355,15 @@ const Header = () => {
     </header>
 
     {/* Project List Dialog */}
-    {showProjectDialog && (
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center"
-        style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
-        onClick={(e) => { if (e.target === e.currentTarget) setShowProjectDialog(false); }}
-      >
-        <div
-          className="rounded-lg shadow-xl p-6 w-[480px] max-h-[70vh] flex flex-col"
-          style={{ backgroundColor: theme.surface, color: theme.text, border: `1px solid ${theme.border}` }}
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold">Projets sauvegardés</h2>
-            <button
-              className="text-xl px-2 hover:opacity-70"
-              onClick={() => setShowProjectDialog(false)}
-            >
-              ✕
-            </button>
-          </div>
-
-          {loadingProjects ? (
-            <div className="text-center py-8 opacity-60">Chargement...</div>
-          ) : projectList.length === 0 ? (
-            <div className="text-center py-8 opacity-60">Aucun projet sauvegardé</div>
-          ) : (
-            <div className="flex-1 overflow-y-auto space-y-2">
-              {projectList.map((project) => (
-                <div
-                  key={project.id}
-                  className="flex items-center justify-between p-3 rounded hover:opacity-80 cursor-pointer"
-                  style={{ backgroundColor: theme.selection, border: `1px solid ${theme.border}` }}
-                >
-                  <div
-                    className="flex-1"
-                    onClick={() => handleLoadFromBackend(project.id)}
-                  >
-                    <div className="font-medium">{project.name || 'Sans titre'}</div>
-                    <div className="text-xs opacity-60">
-                      {project.updatedAt
-                        ? new Date(project.updatedAt).toLocaleString('fr-FR')
-                        : 'Date inconnue'}
-                    </div>
-                  </div>
-                  <button
-                    className="ml-2 px-2 py-1 text-xs rounded transition-all hover:opacity-80"
-                    style={{ backgroundColor: theme.error, color: '#fff' }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteFromBackend(project.id, project.name);
-                    }}
-                  >
-                    Supprimer
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    )}
+    <ProjectListDialog
+      show={showProjectDialog}
+      loading={loadingProjects}
+      projects={projectList}
+      onLoad={handleLoadFromBackend}
+      onDelete={handleDeleteFromBackend}
+      onClose={() => setShowProjectDialog(false)}
+      theme={theme}
+    />
     </>
   );
 };
