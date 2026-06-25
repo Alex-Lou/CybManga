@@ -3,8 +3,10 @@ server:
   # App desktop : le backend ne sert que le front local. On lie l'écoute à la
   # boucle locale pour ne JAMAIS exposer l'API ni la console H2 sur le réseau (LAN).
   address: 127.0.0.1
+  # Ne pas fuiter de détail interne dans la page d'erreur Spring par défaut.
+  # (Les réponses API utiles passent par GlobalExceptionHandler, pas par ceci.)
   error:
-    include-message: always
+    include-message: never
     include-binding-errors: never
     include-stacktrace: never
     include-exception: false
