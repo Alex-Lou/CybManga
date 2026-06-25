@@ -173,6 +173,3 @@ export const COMMON = {
 
 // === UTILITY ===
 export const cn = (...classes) => classes.filter(Boolean).join(' ');
-
-export const getThemeClasses = (isDark, lightClasses, darkClasses) =>
-  isDark ? darkClasses : lightClasses;

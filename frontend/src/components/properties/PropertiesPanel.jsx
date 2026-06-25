@@ -6,12 +6,12 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { useStudio, ACTIONS } from '../../context/StudioContext';
 import { PROPERTIES, cn } from '../../styles/tailwind';
-import { PANEL_TYPES, BUBBLE_TYPES, FONTS } from '../../utils/constants';
+import { PANEL_TYPES, BUBBLE_TYPES, FONTS, MM_TO_PX } from '../../utils/constants';
 import { readFileAsDataURL } from '../../utils/helpers';
 
-// Petite aide pour convertir PX <-> CM pour l'affichage
-// 1 inch = 2.54 cm = 96 px (standard web) => 1 cm ≈ 37.79 px
-const PX_PER_CM = 37.7952755906;
+// Conversion PX <-> CM pour l'affichage. 1 cm = 10 mm, dérivé de MM_TO_PX
+// (DPI 96 standard web) pour rester l'unique source de vérité.
+const PX_PER_CM = MM_TO_PX * 10;
 
 const toCM = (px) => (px / PX_PER_CM).toFixed(2);
 const toPX = (cm) => Math.round(parseFloat(cm) * PX_PER_CM);
@@ -38,16 +38,21 @@ const PropertiesPanel = () => {
 
   const selectedPanel = currentPage?.panels.find(p => state.selectedPanelIds.includes(p.id));
   const selectedBubble = currentPage?.bubbles.find(b => state.selectedBubbleIds.includes(b.id));
-  
+
   const updatePanel = useCallback((updates) => {
     if (!selectedPanel) return;
     dispatch({ type: ACTIONS.UPDATE_PANEL, payload: { id: selectedPanel.id, updates } });
   }, [selectedPanel, dispatch]);
-  
+
   const updateBubble = useCallback((updates) => {
     if (!selectedBubble) return;
     dispatch({ type: ACTIONS.UPDATE_BUBBLE, payload: { id: selectedBubble.id, updates } });
   }, [selectedBubble, dispatch]);
+
+  // Style d'un bouton bascule (B/I/U, alignement) piloté par le thème (dark mode OK)
+  const toggleBtnStyle = (active) => active
+    ? { backgroundColor: `${theme.primary}22`, color: theme.primary, borderColor: theme.primary }
+    : { backgroundColor: theme.bg, color: theme.text, borderColor: theme.border };
 
   // --- GESTION IMAGE CASE ---
   const handleImageUpload = async (e) => {
@@ -86,13 +91,13 @@ const PropertiesPanel = () => {
       img.onload = () => {
         // On adapte l'échelle pour que l'image rentre dans la bulle
         const scale = Math.min(selectedBubble.width / img.naturalWidth, selectedBubble.height / img.naturalHeight);
-        updateBubble({ 
-            image: dataUrl, 
-            imageScaleX: scale, 
-            imageScaleY: scale, 
-            imageX: 0, 
-            imageY: 0, 
-            originalImageWidth: img.naturalWidth, 
+        updateBubble({
+            image: dataUrl,
+            imageScaleX: scale,
+            imageScaleY: scale,
+            imageX: 0,
+            imageY: 0,
+            originalImageWidth: img.naturalWidth,
             originalImageHeight: img.naturalHeight,
             imageOpacity: 1
         });
@@ -118,7 +123,7 @@ const PropertiesPanel = () => {
       </aside>
     );
   }
-  
+
   // ==============================================
   // ÉDITION DE CASE (PANEL)
   // ==============================================
@@ -136,7 +141,7 @@ const PropertiesPanel = () => {
         </div>
 
         <div className={PROPERTIES.content}>
-          
+
           <Section title="Géométrie">
              <div className="grid grid-cols-2 gap-2 mb-2">
                 <InputRow label={`X (${unit})`}>
@@ -187,12 +192,12 @@ const PropertiesPanel = () => {
               {selectedPanel.image ? 'Changer l\'image' : 'Importer une image'}
             </button>
             <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-            
+
             {selectedPanel.image && (
               <div className="space-y-2 mt-2">
                  <div className="flex justify-between text-xs opacity-70">
                     <span>Pos X/Y</span>
-                    <span className="text-[10px] cursor-pointer text-blue-500" onClick={() => updatePanel({ imageX: 0, imageY: 0 })}>Reset</span>
+                    <span className="text-[10px] cursor-pointer" style={{ color: theme.primary }} onClick={() => updatePanel({ imageX: 0, imageY: 0 })}>Reset</span>
                  </div>
                  <div className="grid grid-cols-2 gap-2">
                     <input type="number" className={PROPERTIES.inputSmall} value={Math.round(selectedPanel.imageX || 0)} onChange={(e) => updatePanel({ imageX: parseInt(e.target.value) })} />
@@ -200,7 +205,7 @@ const PropertiesPanel = () => {
                  </div>
                  <div className="flex justify-between text-xs opacity-70 mt-2">
                     <span>Échelle</span>
-                    <span className="text-[10px] cursor-pointer text-blue-500" onClick={() => {
+                    <span className="text-[10px] cursor-pointer" style={{ color: theme.primary }} onClick={() => {
                         const scale = Math.min(selectedPanel.width / selectedPanel.originalImageWidth, selectedPanel.height / selectedPanel.originalImageHeight);
                         updatePanel({ imageScaleX: scale, imageScaleY: scale });
                     }}>Fit</span>
@@ -211,15 +216,15 @@ const PropertiesPanel = () => {
               </div>
             )}
           </Section>
-          
-          <button className={cn(PROPERTIES.button, 'w-full mt-6 text-red-500 border-red-500 hover:bg-red-50')} onClick={handleDelete}>
+
+          <button className={cn(PROPERTIES.button, 'w-full mt-6 hover:opacity-80')} style={{ color: theme.error, borderColor: theme.error }} onClick={handleDelete}>
             🗑️ Supprimer la case
           </button>
         </div>
       </aside>
     );
   }
-  
+
   // ==============================================
   // ÉDITION DE BULLE (BUBBLE) - VERSION COMPLÈTE
   // ==============================================
@@ -228,7 +233,7 @@ const PropertiesPanel = () => {
       <aside className={PROPERTIES.container} style={{ backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }}>
         <div className={PROPERTIES.header} style={{ borderColor: theme.border }}>💬 Bulle</div>
         <div className={PROPERTIES.content}>
-          
+
           <Section title="Type">
             <div className="grid grid-cols-4 gap-1 mb-1">
               {Object.entries(BUBBLE_TYPES).map(([key, config]) => (
@@ -244,7 +249,7 @@ const PropertiesPanel = () => {
               ))}
             </div>
           </Section>
-          
+
           <Section title="Apparence">
             <InputRow label="Queue (°) ">
               <input type="range" min="0" max="360" value={selectedBubble.tailAngle !== undefined ? selectedBubble.tailAngle : 180} onChange={(e) => updateBubble({ tailAngle: parseInt(e.target.value) })} className="w-full" />
@@ -266,15 +271,15 @@ const PropertiesPanel = () => {
               {selectedBubble.image ? 'Changer l\'image' : 'Ajouter une image'}
             </button>
             <input ref={bubbleFileInputRef} type="file" accept="image/*" onChange={handleBubbleImageUpload} className="hidden" />
-            
+
             {selectedBubble.image && (
-                <div className="space-y-2 mt-2 border-t pt-2 border-dashed border-gray-300">
+                <div className="space-y-2 mt-2 border-t pt-2 border-dashed" style={{ borderColor: theme.border }}>
                     <div className="flex justify-between text-xs opacity-70">
                         <span>Opacité Image</span>
-                        <span className="text-[10px] cursor-pointer text-red-500" onClick={() => updateBubble({ image: null })}>Supprimer</span>
+                        <span className="text-[10px] cursor-pointer" style={{ color: theme.error }} onClick={() => updateBubble({ image: null })}>Supprimer</span>
                     </div>
                     <input type="range" min="0" max="1" step="0.1" value={selectedBubble.imageOpacity !== undefined ? selectedBubble.imageOpacity : 1} onChange={(e) => updateBubble({ imageOpacity: parseFloat(e.target.value) })} className="w-full" />
-                    <div className="text-[10px] text-gray-500 italic text-center">Double-cliquez sur la bulle pour ajuster l'image</div>
+                    <div className="text-[10px] italic text-center" style={{ color: theme.textMuted }}>Double-cliquez sur la bulle pour ajuster l'image</div>
                 </div>
             )}
           </Section>
@@ -291,18 +296,18 @@ const PropertiesPanel = () => {
             />
             <div className="flex gap-1 mb-3">
               <button onClick={() => updateBubble({ fontWeight: selectedBubble.fontWeight === 'bold' ? 'normal' : 'bold' })}
-                className={cn("flex-1 p-1 border rounded text-xs font-bold transition-colors", selectedBubble.fontWeight === 'bold' ? "bg-blue-100 border-blue-400 text-blue-700" : "")}
-                style={selectedBubble.fontWeight !== 'bold' ? { backgroundColor: theme.bg, color: theme.text, borderColor: theme.border } : {}}>B</button>
+                className="flex-1 p-1 border rounded text-xs font-bold transition-colors"
+                style={toggleBtnStyle(selectedBubble.fontWeight === 'bold')}>B</button>
               <button onClick={() => updateBubble({ fontStyle: selectedBubble.fontStyle === 'italic' ? 'normal' : 'italic' })}
-                className={cn("flex-1 p-1 border rounded text-xs italic transition-colors", selectedBubble.fontStyle === 'italic' ? "bg-blue-100 border-blue-400 text-blue-700" : "")}
-                style={selectedBubble.fontStyle !== 'italic' ? { backgroundColor: theme.bg, color: theme.text, borderColor: theme.border } : {}}>I</button>
+                className="flex-1 p-1 border rounded text-xs italic transition-colors"
+                style={toggleBtnStyle(selectedBubble.fontStyle === 'italic')}>I</button>
               <button onClick={() => updateBubble({ textDecoration: selectedBubble.textDecoration === 'underline' ? 'none' : 'underline' })}
-                className={cn("flex-1 p-1 border rounded text-xs underline transition-colors", selectedBubble.textDecoration === 'underline' ? "bg-blue-100 border-blue-400 text-blue-700" : "")}
-                style={selectedBubble.textDecoration !== 'underline' ? { backgroundColor: theme.bg, color: theme.text, borderColor: theme.border } : {}}>U</button>
+                className="flex-1 p-1 border rounded text-xs underline transition-colors"
+                style={toggleBtnStyle(selectedBubble.textDecoration === 'underline')}>U</button>
               <div className="w-[1px] mx-1" style={{ backgroundColor: theme.border }}></div>
-              <button onClick={() => updateBubble({ textAlign: 'left' })} className={cn("flex-1 p-1 border rounded text-[10px] transition-colors", selectedBubble.textAlign === 'left' ? "bg-blue-100 border-blue-400 text-blue-700" : "")} style={{ backgroundColor: selectedBubble.textAlign === 'left' ? undefined : theme.bg, color: selectedBubble.textAlign === 'left' ? undefined : theme.text, borderColor: selectedBubble.textAlign === 'left' ? undefined : theme.border }}>☰</button>
-              <button onClick={() => updateBubble({ textAlign: 'center' })} className={cn("flex-1 p-1 border rounded text-[10px] transition-colors", selectedBubble.textAlign === 'center' ? "bg-blue-100 border-blue-400 text-blue-700" : "")} style={{ backgroundColor: selectedBubble.textAlign === 'center' ? undefined : theme.bg, color: selectedBubble.textAlign === 'center' ? undefined : theme.text, borderColor: selectedBubble.textAlign === 'center' ? undefined : theme.border }}>⫼</button>
-              <button onClick={() => updateBubble({ textAlign: 'right' })} className={cn("flex-1 p-1 border rounded text-[10px] transition-colors", selectedBubble.textAlign === 'right' ? "bg-blue-100 border-blue-400 text-blue-700" : "")} style={{ backgroundColor: selectedBubble.textAlign === 'right' ? undefined : theme.bg, color: selectedBubble.textAlign === 'right' ? undefined : theme.text, borderColor: selectedBubble.textAlign === 'right' ? undefined : theme.border }}>☰</button>
+              <button onClick={() => updateBubble({ textAlign: 'left' })} className="flex-1 p-1 border rounded text-[10px] transition-colors" style={toggleBtnStyle(selectedBubble.textAlign === 'left')}>☰</button>
+              <button onClick={() => updateBubble({ textAlign: 'center' })} className="flex-1 p-1 border rounded text-[10px] transition-colors" style={toggleBtnStyle(selectedBubble.textAlign === 'center')}>⫼</button>
+              <button onClick={() => updateBubble({ textAlign: 'right' })} className="flex-1 p-1 border rounded text-[10px] transition-colors" style={toggleBtnStyle(selectedBubble.textAlign === 'right')}>☰</button>
             </div>
             <InputRow label="Police">
               <select className={PROPERTIES.select} value={selectedBubble.fontFamily} onChange={(e) => updateBubble({ fontFamily: e.target.value })}>
@@ -316,8 +321,8 @@ const PropertiesPanel = () => {
               <input type="color" className={PROPERTIES.colorInput} value={selectedBubble.textColor || '#000000'} onChange={(e) => updateBubble({ textColor: e.target.value })} />
             </InputRow>
           </Section>
-          
-          <button className={cn(PROPERTIES.button, 'w-full mt-6 text-red-500 border-red-500 hover:bg-red-50')} onClick={handleDelete}>
+
+          <button className={cn(PROPERTIES.button, 'w-full mt-6 hover:opacity-80')} style={{ color: theme.error, borderColor: theme.error }} onClick={handleDelete}>
             🗑️ Supprimer la bulle
           </button>
         </div>

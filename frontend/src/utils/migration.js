@@ -5,7 +5,7 @@
 // ============================================
 
 import { generateId } from './helpers';
-import { DEFAULT_LAYER, BLEND_MODES_MAP } from './constants';
+import { DEFAULT_LAYER } from './constants';
 
 /**
  * Create default layers for a new page.
@@ -53,28 +53,4 @@ export function migratePageToLayers(page) {
     activeLayerId: inkLayerId,
     drawings: undefined, // remove old field
   };
-}
-
-/**
- * Migrate PSD blend mode string to app blend mode.
- * Falls back to 'source-over' if unknown.
- */
-export function migratePsdBlendMode(psdMode) {
-  const mapping = {
-    'normal': 'source-over',
-    'multiply': 'multiply',
-    'screen': 'screen',
-    'overlay': 'overlay',
-    'soft light': 'soft-light',
-    'hard light': 'hard-light',
-    'color dodge': 'color-dodge',
-    'color burn': 'color-burn',
-    'darken': 'darken',
-    'lighten': 'lighten',
-  };
-  const result = mapping[(psdMode || '').toLowerCase()];
-  if (!result) {
-    console.warn(`[SumiWire] Unknown PSD blend mode "${psdMode}", falling back to Normal`);
-  }
-  return result || 'source-over';
 }
