@@ -14,6 +14,7 @@ import { readFileAsDataURL, saveBrushesToStorage } from '../../utils/helpers';
 import ColorPickerContent from './ColorPickerContent';
 import DrawingToolOptions from './DrawingToolOptions';
 import BrushCreatorModal from './BrushCreatorModal';
+import ToolbarViewControls from './ToolbarViewControls';
 
 const Toolbar = ({ onToggleRefPanel, showRefPanel }) => {
   const { state, dispatch, theme } = useStudio();
@@ -344,23 +345,7 @@ const Toolbar = ({ onToggleRefPanel, showRefPanel }) => {
             ))}
           </DropdownButton>
 
-          {/* Shape correction toggle */}
-          <button className={TOOLBAR.button}
-            onClick={() => dispatch({ type: ACTIONS.SET_DRAWING_SETTINGS, payload: { shapeCorrection: !state.drawing.shapeCorrection } })}
-            title="Correction de forme (auto-cercle, ligne, rectangle)"
-            style={getActiveStyle(state.drawing.shapeCorrection)}>
-            ◯
-          </button>
-
-          {/* Alpha lock toggle */}
-          <button className={TOOLBAR.button}
-            onClick={() => dispatch({ type: ACTIONS.SET_DRAWING_SETTINGS, payload: { alphaLock: !state.drawing.alphaLock } })}
-            title="Verrouiller transparence (peindre uniquement sur les pixels existants)"
-            style={getActiveStyle(state.drawing.alphaLock)}>
-            🔒
-          </button>
-
-          {/* Options conditionnelles par outil (gap/speed/focus/screentone/gradient) */}
+          {/* Outils par outil (shape, alpha, gap/speed/focus/screentone/gradient) */}
           <DrawingToolOptions drawing={state.drawing} dispatch={dispatch} theme={theme} getActiveStyle={getActiveStyle} />
 
           {/* Rotation controls */}
@@ -384,46 +369,18 @@ const Toolbar = ({ onToggleRefPanel, showRefPanel }) => {
 
       <div className="flex-1" />
 
-      {/* Canvas flip button */}
-      <div className={TOOLBAR.group}>
-        <button className={TOOLBAR.button} onClick={() => dispatch({ type: ACTIONS.TOGGLE_FLIP_H })}
-          title="Miroir horizontal" style={getActiveStyle(state.flipH)}>
-          ↔️
-        </button>
-      </div>
-
-      <div className={TOOLBAR.groupDivider} style={{ backgroundColor: theme.border }} />
-
-      {/* View options */}
-      <div className={TOOLBAR.group}>
-        <button className={TOOLBAR.button} onClick={() => dispatch({ type: ACTIONS.TOGGLE_GRID })}
-          title="Grille (G)" style={getActiveStyle(state.showGrid)}>▦</button>
-        <button className={TOOLBAR.button} onClick={() => dispatch({ type: ACTIONS.TOGGLE_GUIDES })}
-          title="Guides" style={getActiveStyle(state.showGuides)}>⛶</button>
-        <button className={TOOLBAR.button} onClick={() => dispatch({ type: ACTIONS.TOGGLE_SNAP })}
-          title="Magnétisme (S)" style={getActiveStyle(state.snapToGrid)}>🧲</button>
-        <button className={TOOLBAR.button} onClick={() => dispatch({ type: ACTIONS.TOGGLE_READING_ORDER })}
-          title="Ordre de lecture" style={getActiveStyle(state.showReadingOrder)}>📖</button>
-        <button className={TOOLBAR.button} onClick={onToggleRefPanel}
-          title="Images de référence" style={getActiveStyle(showRefPanel)}>🖼️</button>
-      </div>
-
-      <div className={TOOLBAR.groupDivider} style={{ backgroundColor: theme.border }} />
-
-      {/* Zoom controls */}
-      <div className={TOOLBAR.group}>
-        <button className={TOOLBAR.button} onClick={() => dispatch({ type: ACTIONS.SET_ZOOM, payload: Math.max(state.zoom - 0.1, 0.1) })} title="Zoom -">🔍-</button>
-        <div className="flex items-center relative">
-          <input type="number" value={zoomInput} onChange={(e) => setZoomInput(e.target.value)}
-            onBlur={handleZoomCommit} onKeyDown={handleZoomKeyDown}
-            className="w-12 text-center text-sm bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-current rounded appearance-none m-0 p-0"
-            style={{ color: theme.text }} />
-          <span className="text-sm pointer-events-none">%</span>
-        </div>
-        <button className={TOOLBAR.button} onClick={() => dispatch({ type: ACTIONS.SET_ZOOM, payload: Math.min(state.zoom + 0.1, 5) })} title="Zoom +">🔍+</button>
-        <button className={TOOLBAR.button} onClick={() => { dispatch({ type: ACTIONS.SET_ZOOM, payload: 1 }); dispatch({ type: ACTIONS.SET_PAN, payload: { x: 0, y: 0 } }); }}
-          title="Zoom 100% (Ctrl+0)" style={{ fontSize: '10px', padding: '2px 4px' }}>1:1</button>
-      </div>
+      <ToolbarViewControls
+        state={state}
+        dispatch={dispatch}
+        theme={theme}
+        getActiveStyle={getActiveStyle}
+        zoomInput={zoomInput}
+        setZoomInput={setZoomInput}
+        onZoomCommit={handleZoomCommit}
+        onZoomKeyDown={handleZoomKeyDown}
+        onToggleRefPanel={onToggleRefPanel}
+        showRefPanel={showRefPanel}
+      />
 
       {/* === BRUSH CREATOR MODAL === */}
       <BrushCreatorModal

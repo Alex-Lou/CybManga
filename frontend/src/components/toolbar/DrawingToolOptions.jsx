@@ -10,6 +10,22 @@ import { TOOLBAR } from '../../styles/tailwind';
 const DrawingToolOptions = ({ drawing, dispatch, theme, getActiveStyle }) => {
   return (
     <>
+      {/* Shape correction toggle */}
+      <button className={TOOLBAR.button}
+        onClick={() => dispatch({ type: ACTIONS.SET_DRAWING_SETTINGS, payload: { shapeCorrection: !drawing.shapeCorrection } })}
+        title="Correction de forme (auto-cercle, ligne, rectangle)"
+        style={getActiveStyle(drawing.shapeCorrection)}>
+        ◯
+      </button>
+
+      {/* Alpha lock toggle */}
+      <button className={TOOLBAR.button}
+        onClick={() => dispatch({ type: ACTIONS.SET_DRAWING_SETTINGS, payload: { alphaLock: !drawing.alphaLock } })}
+        title="Verrouiller transparence (peindre uniquement sur les pixels existants)"
+        style={getActiveStyle(drawing.alphaLock)}>
+        🔒
+      </button>
+
       {/* Gap fill slider (visible when fill tool active) */}
       {drawing.tool === 'fill' && (
         <div className={TOOLBAR.group + ' gap-2'}>
