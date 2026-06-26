@@ -94,8 +94,8 @@ const SettingsModal = () => {
   return (
     <div className={MODAL.overlay} onClick={handleBackdropClick} onKeyDown={editingKey ? handleKeyCapture : undefined}>
       <div
-        className="rounded-xl shadow-2xl w-full max-w-2xl mx-4 max-h-[85vh] flex flex-col"
-        style={{ backgroundColor: theme.surface, color: theme.text }}
+        className="rounded-xl shadow-2xl w-full mx-4 max-h-[85vh] flex flex-col"
+        style={{ backgroundColor: theme.surface, color: theme.text, maxWidth: 760 }}
       >
         {/* Header */}
         <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: theme.border }}>
