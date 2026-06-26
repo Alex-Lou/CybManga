@@ -6,7 +6,7 @@
 // === LAYOUT ===
 export const LAYOUT = {
   appContainer: 'h-dvh w-full flex flex-col overflow-hidden max-h-screen',
-  mainContent: 'flex flex-1 min-h-0 overflow-hidden',
+  mainContent: 'flex flex-1 min-h-0 overflow-hidden relative',
   sidebar: 'w-56 lg:w-64 flex-shrink-0 flex flex-col border-r overflow-hidden',
   sidebarSection: 'p-2.5 border-b',
   sidebarTitle: 'text-xs font-semibold uppercase tracking-widest mb-2 opacity-60',
@@ -115,7 +115,7 @@ export const BUBBLE = {
 
 // === PROPERTIES PANEL ===
 export const PROPERTIES = {
-  container: 'w-64 lg:w-72 flex-shrink-0 border-l flex flex-col',
+  container: 'w-64 lg:w-72 flex-shrink-0 border-l flex flex-col h-full',
   header: 'p-2.5 border-b font-semibold text-sm uppercase tracking-wider',
   content: 'flex-1 overflow-y-auto p-3 space-y-3',
   section: 'space-y-2',

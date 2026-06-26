@@ -14,6 +14,7 @@ import SettingsModal from './components/modals/SettingsModal';
 import NavigatorPanel from './components/navigator/NavigatorPanel';
 import ReferencePanel from './components/reference/ReferencePanel';
 import RadialMenu from './components/radial/RadialMenu';
+import StatusBar from './components/StatusBar';
 import { LAYOUT } from './styles/tailwind';
 
 const AppContent = () => {
@@ -46,8 +47,22 @@ const AppContent = () => {
       <div className={LAYOUT.mainContent}>
         <Sidebar />
         <Canvas />
-        {hasSelection && <PropertiesPanel />}
+        {/* Panneau de propriétés en overlay glissant : ne modifie pas la largeur du Canvas
+            (la feuille ne se décale plus quand on sélectionne un élément). */}
+        <div
+          className="absolute top-0 right-0 bottom-0 z-30"
+          style={{
+            transform: hasSelection ? 'translateX(0)' : 'translateX(100%)',
+            transition: 'transform 0.22s ease',
+            pointerEvents: hasSelection ? 'auto' : 'none',
+            boxShadow: hasSelection ? '-10px 0 30px rgba(0,0,0,0.28)' : 'none',
+          }}
+        >
+          <PropertiesPanel />
+        </div>
       </div>
+
+      <StatusBar />
 
       {/* Floating panels */}
       <NavigatorPanel />
