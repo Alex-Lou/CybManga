@@ -22,73 +22,48 @@ export const useCanvasInteraction = ({ state, dispatch, currentPage }) => {
   const [dragPreviewPos, setDragPreviewPos] = useState(null);
   const dragPreviewPosRef = useRef(null); // Real-time position tracking
 
-  // --- CENTRER LA VUE SUR LES PAGES ---
+  // --- CENTRER LA VUE SUR LE CONTENU RÉELLEMENT RENDU ---
+  // Robuste : on se base sur le scroll réel du conteneur, indépendant du zoom/mode.
   const centerViewOnPages = useCallback(() => {
-    if (!containerRef.current) return;
-
     const container = containerRef.current;
-    const containerWidth = container.clientWidth;
-    const containerHeight = container.clientHeight;
-
-    // Calculer la position de la première page selon le mode
-    let targetX = 0;
-    let targetY = 0;
-    let contentWidth = 0;
-    let contentHeight = 0;
-
-    if (state.viewMode === 'single') {
-      const format = PAGE_FORMATS[currentPage?.format || 'a4'];
-      contentWidth = format.width + 200;
-      contentHeight = format.height + 200;
-      // Centrer sur la page
-      targetX = (contentWidth * state.zoom - containerWidth) / 2;
-      targetY = (contentHeight * state.zoom - containerHeight) / 2;
-    } else if (state.viewMode === 'spread') {
-      const format = PAGE_FORMATS[currentPage?.format || 'a4'];
-      contentWidth = (format.width * 2) + 300;
-      contentHeight = format.height + 200;
-      targetX = (contentWidth * state.zoom - containerWidth) / 2;
-      targetY = (contentHeight * state.zoom - containerHeight) / 2;
-    } else if (state.viewMode === 'all') {
-      // En mode all, centrer sur la première page (position 0,0 ou position stockée)
-      const firstPage = state.pages[0];
-      const format = PAGE_FORMATS[firstPage?.format || 'a4'];
-      const gridGap = 40;
-      const firstPos = firstPage?.position || { x: 0, y: 0 };
-
-      // Calculer où la première page apparaît (avec scale 0.5)
-      const scaledX = firstPos.x * 0.5;
-      const scaledY = firstPos.y * 0.5;
-      const scaledWidth = format.width * 0.5;
-      const scaledHeight = format.height * 0.5;
-
-      // Centrer la vue sur cette page
-      targetX = (scaledX + scaledWidth / 2) * state.zoom - containerWidth / 2;
-      targetY = (scaledY + scaledHeight / 2) * state.zoom - containerHeight / 2;
-    }
-
-    // Appliquer le scroll (avec limites)
+    if (!container) return;
     container.scrollTo({
-      left: Math.max(0, targetX),
-      top: Math.max(0, targetY),
-      behavior: 'smooth'
+      left: Math.max(0, (container.scrollWidth - container.clientWidth) / 2),
+      top: Math.max(0, (container.scrollHeight - container.clientHeight) / 2),
+      behavior: 'smooth',
     });
-  }, [state.viewMode, state.zoom, state.pages, currentPage]);
+  }, []);
 
-  // Centrer la vue quand le mode change
+  // --- AJUSTER LE ZOOM POUR QUE LA PAGE TIENNE DANS LA VUE (vue neutre, comme un éditeur) ---
+  const fitToView = useCallback(() => {
+    const container = containerRef.current;
+    if (!container || state.viewMode === 'all') return; // la grille garde son zoom
+    const format = PAGE_FORMATS[currentPage?.format || 'a4'];
+    const pad = 80; // marge de respiration autour de la page
+    const contentW = state.viewMode === 'spread' ? format.width * 2 + 40 : format.width;
+    const fit = 0.92 * Math.min(
+      (container.clientWidth - pad) / contentW,
+      (container.clientHeight - pad) / format.height
+    );
+    dispatch({ type: ACTIONS.SET_ZOOM, payload: Math.max(0.1, Math.min(1, fit)) });
+    dispatch({ type: ACTIONS.SET_PAN, payload: { x: 0, y: 0 } });
+  }, [currentPage, state.viewMode, dispatch]);
+
+  // Ajuster + centrer quand le mode de vue change
   useEffect(() => {
-    // Petit délai pour laisser le DOM se mettre à jour
     const timer = setTimeout(() => {
-      centerViewOnPages();
-    }, 50);
+      fitToView();
+      setTimeout(centerViewOnPages, 120); // recentre une fois le nouveau zoom rendu
+    }, 60);
     return () => clearTimeout(timer);
   }, [state.viewMode]);
 
-  // Centrer au montage initial
+  // Vue neutre au montage initial (fit + center)
   useEffect(() => {
     const timer = setTimeout(() => {
-      centerViewOnPages();
-    }, 100);
+      fitToView();
+      setTimeout(centerViewOnPages, 120);
+    }, 120);
     return () => clearTimeout(timer);
   }, []);
 
