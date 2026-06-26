@@ -21,18 +21,35 @@ export const useCanvasInteraction = ({ state, dispatch, currentPage }) => {
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [dragPreviewPos, setDragPreviewPos] = useState(null);
   const dragPreviewPosRef = useRef(null); // Real-time position tracking
+  const didMountRef = useRef(false);
 
   // --- CENTRER LA VUE SUR LE CONTENU RÉELLEMENT RENDU ---
-  // Robuste : on se base sur le scroll réel du conteneur, indépendant du zoom/mode.
+  // Le canvas est scalé avec transform-origin 0 0 : à zoom < 1 le contenu se colle
+  // en haut-gauche et le scroll ne peut pas le recentrer. On centre donc via le
+  // panOffset (translate du wrapper), en mesurant la boîte visuelle réelle des pages.
   const centerViewOnPages = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
-    container.scrollTo({
-      left: Math.max(0, (container.scrollWidth - container.clientWidth) / 2),
-      top: Math.max(0, (container.scrollHeight - container.clientHeight) / 2),
-      behavior: 'smooth',
-    });
-  }, []);
+    const inner = container.querySelector('#canvas-export-area');
+    const content = inner?.firstElementChild; // conteneur de vue (single/spread/all)
+    if (!content || !content.children.length) return;
+    // Boîte englobante des pages réellement rendues (ignore padding/minWidth du conteneur).
+    let minL = Infinity, minT = Infinity, maxR = -Infinity, maxB = -Infinity;
+    for (const child of content.children) {
+      const r = child.getBoundingClientRect();
+      minL = Math.min(minL, r.left); minT = Math.min(minT, r.top);
+      maxR = Math.max(maxR, r.right); maxB = Math.max(maxB, r.bottom);
+    }
+    const c = container.getBoundingClientRect();
+    // Delta pour amener le centre du contenu sur le centre du viewport.
+    const dx = (c.left + c.right) / 2 - (minL + maxR) / 2;
+    const dy = (c.top + c.bottom) / 2 - (minT + maxB) / 2;
+    // panOffset courant lu en direct (évite toute dépendance d'état périmée).
+    const wrapper = inner.parentElement;
+    const tr = getComputedStyle(wrapper).transform;
+    const m = new DOMMatrix(tr && tr !== 'none' ? tr : undefined);
+    dispatch({ type: ACTIONS.SET_PAN, payload: { x: m.e + dx, y: m.f + dy } });
+  }, [dispatch]);
 
   // --- AJUSTER LE ZOOM POUR QUE LA PAGE TIENNE DANS LA VUE (vue neutre, comme un éditeur) ---
   const fitToView = useCallback(() => {
@@ -47,25 +64,27 @@ export const useCanvasInteraction = ({ state, dispatch, currentPage }) => {
     );
     dispatch({ type: ACTIONS.SET_ZOOM, payload: Math.max(0.1, Math.min(1, fit)) });
     dispatch({ type: ACTIONS.SET_PAN, payload: { x: 0, y: 0 } });
+    container.scrollTo({ left: 0, top: 0, behavior: 'auto' }); // base propre pour le centrage par panOffset
   }, [currentPage, state.viewMode, dispatch]);
 
-  // Ajuster + centrer quand le mode de vue change
+  // Vue neutre au montage initial : fit puis recentre une fois le zoom rendu.
   useEffect(() => {
     const timer = setTimeout(() => {
       fitToView();
-      setTimeout(centerViewOnPages, 120); // recentre une fois le nouveau zoom rendu
-    }, 60);
-    return () => clearTimeout(timer);
-  }, [state.viewMode]);
-
-  // Vue neutre au montage initial (fit + center)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      fitToView();
-      setTimeout(centerViewOnPages, 120);
+      setTimeout(centerViewOnPages, 160);
     }, 120);
     return () => clearTimeout(timer);
   }, []);
+
+  // Re-fit + recentre au changement de mode de vue (pas au montage initial).
+  useEffect(() => {
+    if (!didMountRef.current) { didMountRef.current = true; return; }
+    const timer = setTimeout(() => {
+      fitToView();
+      setTimeout(centerViewOnPages, 160);
+    }, 60);
+    return () => clearTimeout(timer);
+  }, [state.viewMode]);
 
   // --- SHORTCUTS (ESPACE POUR PAN + FLÈCHES POUR SCROLL + HOME POUR CENTRER) ---
   useEffect(() => {

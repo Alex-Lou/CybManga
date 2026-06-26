@@ -7,6 +7,29 @@ import { CANVAS } from '../../styles/tailwind';
 import { PAGE_FORMATS } from '../../utils/constants';
 import CanvasPage from './CanvasPage';
 
+// Page « en regard » vide (quand il n'y a pas de page suivante) : rend la vue
+// double page lisible comme un livre ouvert, même avec une seule page.
+const BlankFacingPage = ({ format, theme }) => (
+  <div
+    className="flex items-center justify-center"
+    style={{
+      width: format.width,
+      height: format.height,
+      backgroundColor: theme.page,
+      opacity: 0.4,
+      border: `2px dashed ${theme.border}`,
+      borderRadius: 2,
+    }}
+  >
+    <span
+      className="uppercase tracking-widest font-medium"
+      style={{ fontSize: 34, color: theme.textMuted }}
+    >
+      Page suivante
+    </span>
+  </div>
+);
+
 const CanvasView = ({
   state, currentPage, theme, safeMargin, bleedMargin,
   isSpacePressed, draggingPageIndex, dragPreviewPos,
@@ -44,13 +67,15 @@ const CanvasView = ({
         <div
           className={CANVAS.spreadView}
           style={{
-            minWidth: (spreadFormat.width * 2) + 300,
+            minWidth: spreadFormat.width * 2 + 240,
             minHeight: spreadFormat.height + 200,
             padding: '100px',
           }}
         >
           <CanvasPage page={currentPage} pageIndex={state.activePageIndex} {...pageProps} />
-          {nextPage && <CanvasPage page={nextPage} pageIndex={nextIndex} {...pageProps} />}
+          {nextPage
+            ? <CanvasPage page={nextPage} pageIndex={nextIndex} {...pageProps} />
+            : <BlankFacingPage format={spreadFormat} theme={theme} />}
         </div>
       );
     }
