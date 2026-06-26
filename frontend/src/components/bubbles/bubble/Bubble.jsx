@@ -71,10 +71,12 @@ const Bubble = ({ bubble, pageWidth, pageHeight }) => {
         zIndex: bubble.zIndex || 10,
         // ✅ CORRIGÉ : pointerEvents auto pour permettre les interactions
         pointerEvents: 'auto',
+        // touch-action none : le doigt/stylet manipule la bulle au lieu de scroller le canvas
+        touchAction: 'none',
         transform: 'translate3d(0,0,0)',
       }}
       onClick={handleSelect}
-      onMouseDown={handleMouseDown}
+      onPointerDown={handleMouseDown}
       onDoubleClick={handleDoubleClick}
     >
       {/* Wrapper pour BubbleShape - aussi avec pointerEvents auto */}
@@ -93,14 +95,14 @@ const Bubble = ({ bubble, pageWidth, pageHeight }) => {
       >
         <BubbleShape bubble={bubble} />
         {isSelected && !isEditingImage && bubble.type !== 'narration' && (
-          <TailHandle bubble={bubble} onMouseDown={handleTailMouseDown} />
+          <TailHandle bubble={bubble} onPointerDown={handleTailMouseDown} />
         )}
       </div>
 
       {/* Texte de la bulle */}
       <BubbleText
         bubble={bubble}
-        onMouseDown={handleTextMouseDown}
+        onPointerDown={handleTextMouseDown}
         isDragging={isDragging}
         isEditingImage={isEditingImage}
       />

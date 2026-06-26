@@ -85,8 +85,9 @@ const ImageHandles = ({ bubble, onImageResizeStart }) => {
               transform: 'translate(-50%, -50%)',
               cursor: getCursor(handle),
               borderRadius: isCorner ? '2px' : '50%',
+              touchAction: 'none',
             }}
-            onMouseDown={(e) => onImageResizeStart(e, handle)}
+            onPointerDown={(e) => onImageResizeStart(e, handle)}
           />
         );
       })}

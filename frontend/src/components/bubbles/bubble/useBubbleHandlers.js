@@ -47,6 +47,7 @@ export const useBubbleHandlers = (bubble, pageWidth, pageHeight, bubbleRef, isSe
   const handleMouseDown = useCallback((e) => {
     e.stopPropagation();
     if (e.button !== 0) return;
+    e.currentTarget.setPointerCapture?.(e.pointerId);
 
     if (!isSelected) dispatch({ type: ACTIONS.SET_SELECTION, payload: { panelIds: [], bubbleIds: [bubble.id] } });
 
@@ -62,6 +63,7 @@ export const useBubbleHandlers = (bubble, pageWidth, pageHeight, bubbleRef, isSe
 
   const handleResizeStart = useCallback((e, h) => {
     e.stopPropagation();
+    e.currentTarget.setPointerCapture?.(e.pointerId);
     setIsResizing(true);
     setResizeHandle(h);
     resizeStartRef.current = { x: e.clientX, y: e.clientY, width: bubble.width, height: bubble.height, bubbleX: bubble.x, bubbleY: bubble.y };
@@ -69,6 +71,7 @@ export const useBubbleHandlers = (bubble, pageWidth, pageHeight, bubbleRef, isSe
 
   const handleImageResizeStart = useCallback((e, h) => {
     e.stopPropagation();
+    e.currentTarget.setPointerCapture?.(e.pointerId);
     setIsResizingImage(true);
     setResizeHandle(h);
     imageResizeStartRef.current = { 
@@ -81,12 +84,14 @@ export const useBubbleHandlers = (bubble, pageWidth, pageHeight, bubbleRef, isSe
 
   const handleTailMouseDown = useCallback((e) => {
     e.stopPropagation();
+    e.currentTarget.setPointerCapture?.(e.pointerId);
     setIsDraggingTail(true);
   }, []);
 
   const handleTextMouseDown = useCallback((e) => {
     if (bubble.textLocked) return;
     e.stopPropagation();
+    e.currentTarget.setPointerCapture?.(e.pointerId);
     setIsDraggingText(true);
     textDragStartRef.current = { x: e.clientX, y: e.clientY, offsetX: bubble.textOffsetX || 0, offsetY: bubble.textOffsetY || 0 };
   }, [bubble]);
@@ -242,12 +247,12 @@ export const useBubbleHandlers = (bubble, pageWidth, pageHeight, bubbleRef, isSe
       setResizeHandle(null);
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-    
+    window.addEventListener('pointermove', handleMouseMove);
+    window.addEventListener('pointerup', handleMouseUp);
+
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('pointermove', handleMouseMove);
+      window.removeEventListener('pointerup', handleMouseUp);
     };
   }, [isDragging, isResizing, isDraggingTail, isDraggingText, isDraggingImage, isResizingImage, resizeHandle, bubble, pageWidth, pageHeight, state.zoom, state.snapToGrid, dispatch, bubbleRef]);
 

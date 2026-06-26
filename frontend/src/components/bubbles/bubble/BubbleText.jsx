@@ -2,7 +2,7 @@
 import React from 'react';
 import { BUBBLE } from '../../../styles/tailwind';
 
-const BubbleText = ({ bubble, onMouseDown, isDragging }) => {
+const BubbleText = ({ bubble, onPointerDown, isDragging }) => {
   return (
     <div
       className={BUBBLE.textWrapper}
@@ -19,9 +19,10 @@ const BubbleText = ({ bubble, onMouseDown, isDragging }) => {
     >
       <div
         className={BUBBLE.text}
-        onMouseDown={onMouseDown}
+        onPointerDown={onPointerDown}
         style={{
           pointerEvents: 'auto',
+          touchAction: 'none',
           fontFamily: bubble.fontFamily,
           fontSize: bubble.fontSize,
           fontWeight: bubble.fontWeight,

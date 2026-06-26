@@ -56,6 +56,11 @@ const Canvas = () => {
     cursorStyle = 'grabbing';
   }
 
+  // En mode pan (outil main / espace / pan en cours) on coupe le scroll natif tactile
+  // pour que le pointer-pan prenne la main au doigt et au stylet. Sinon on laisse le
+  // scroll natif assurer le déplacement à un doigt sur les zones vides.
+  const isPanMode = state.activeTool === 'pan' || isSpacePressed || isPanning;
+
   return (
     <div
       ref={containerRef}
@@ -63,10 +68,11 @@ const Canvas = () => {
       style={{
         backgroundColor: theme.canvas,
         cursor: cursorStyle,
+        touchAction: isPanMode ? 'none' : 'auto',
       }}
       tabIndex={0}
       onClick={handleCanvasClick}
-      onMouseDown={handleMouseDown}
+      onPointerDown={handleMouseDown}
       onDragOver={handleCanvasDragOver}
       onDrop={handleCanvasDrop}
     >

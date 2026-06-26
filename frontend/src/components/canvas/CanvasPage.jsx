@@ -33,10 +33,12 @@ const CanvasPage = ({
         height: format.height,
         backgroundColor: theme.page,
         position: 'relative',
+        // En vue « all » la page est déplaçable : touch-action none pour la traîner au doigt/stylet.
+        ...(isDraggable ? { touchAction: 'none' } : {}),
         ...(isActive ? { boxShadow: `0 0 0 2px ${theme.primary}, 0 0 15px ${theme.glow || 'rgba(0,247,255,0.2)'}` } : {}),
         ...extraStyle,
       }}
-      onMouseDown={(e) => {
+      onPointerDown={(e) => {
         if (isDraggable && e.button === 0 && !isSpacePressed && state.activeTool !== 'pan') {
           onPageDragStart(e, pageIndex);
         }

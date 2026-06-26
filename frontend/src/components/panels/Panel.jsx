@@ -99,8 +99,8 @@ const Panel = ({ panel, pageWidth, pageHeight }) => {
   useEffect(() => {
     if (!contextMenu) return;
     const close = () => setContextMenu(null);
-    window.addEventListener('mousedown', close);
-    return () => window.removeEventListener('mousedown', close);
+    window.addEventListener('pointerdown', close);
+    return () => window.removeEventListener('pointerdown', close);
   }, [contextMenu]);
 
   // Auto-focus rename input
@@ -116,6 +116,7 @@ const Panel = ({ panel, pageWidth, pageHeight }) => {
     e.preventDefault();
     if (isLocked) return;
     if (e.button !== 0) return;
+    e.currentTarget.setPointerCapture?.(e.pointerId);
 
     if (!isSelected) dispatch({ type: ACTIONS.SET_SELECTION, payload: { panelIds: [panel.id], bubbleIds: [] } });
 
@@ -144,6 +145,7 @@ const Panel = ({ panel, pageWidth, pageHeight }) => {
     e.stopPropagation();
     e.preventDefault();
     if (isLocked) return;
+    e.currentTarget.setPointerCapture?.(e.pointerId);
 
     setIsResizing(true);
     setResizeHandle(handle);
@@ -158,6 +160,7 @@ const Panel = ({ panel, pageWidth, pageHeight }) => {
     e.stopPropagation();
     e.preventDefault();
     if (isLocked) return;
+    e.currentTarget.setPointerCapture?.(e.pointerId);
 
     setIsResizingImage(true);
     setResizeHandle(handle);
@@ -260,9 +263,9 @@ const Panel = ({ panel, pageWidth, pageHeight }) => {
       setIsDragging(false); setIsResizing(false); setIsDraggingImage(false); setIsResizingImage(false); setResizeHandle(null);
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-    return () => { window.removeEventListener('mousemove', handleMouseMove); window.removeEventListener('mouseup', handleMouseUp); };
+    window.addEventListener('pointermove', handleMouseMove);
+    window.addEventListener('pointerup', handleMouseUp);
+    return () => { window.removeEventListener('pointermove', handleMouseMove); window.removeEventListener('pointerup', handleMouseUp); };
   }, [isDragging, isResizing, isDraggingImage, isResizingImage, resizeHandle, pageWidth, pageHeight, state.zoom, state.snapToGrid, dispatch, panel.id]);
 
   // --- RENDU ---
@@ -286,10 +289,12 @@ const Panel = ({ panel, pageWidth, pageHeight }) => {
         cursor: isLocked ? 'not-allowed' : (isEditingImage ? 'move' : (isDragging ? 'grabbing' : 'grab')),
         outline: isEditingImage ? '2px dashed #f59e0b' : 'none',
         outlineOffset: '2px',
-        pointerEvents: 'auto'
+        pointerEvents: 'auto',
+        // touch-action none : le doigt/stylet manipule la case au lieu de scroller le canvas
+        touchAction: 'none'
       }}
       onClick={handleSelect}
-      onMouseDown={handleMouseDown}
+      onPointerDown={handleMouseDown}
       onDoubleClick={handleDoubleClick}
       onContextMenu={handleContextMenu}
     >
@@ -314,9 +319,10 @@ const Panel = ({ panel, pageWidth, pageHeight }) => {
             <div
               key={handle}
               className={cn(PANEL.handle, PANEL[`handle${handle.toUpperCase()}`])}
-              onMouseDown={(e) => handleResizeStart(e, handle)}
+              onPointerDown={(e) => handleResizeStart(e, handle)}
               style={{
                 pointerEvents: 'auto',
+                touchAction: 'none',
                 top: handle.includes('n') ? 0 : handle.includes('s') ? '100%' : '50%',
                 left: handle.includes('w') ? 0 : handle.includes('e') ? '100%' : '50%',
                 transform: `translate(${handle.includes('e') ? '50%' : handle.includes('w') ? '-50%' : '-50%'}, ${handle.includes('s') ? '50%' : handle.includes('n') ? '-50%' : '-50%'})`,
@@ -341,8 +347,8 @@ const Panel = ({ panel, pageWidth, pageHeight }) => {
               <div
                 key={`img-${handle}`}
                 className="absolute w-3 h-3 bg-yellow-500 rounded-full pointer-events-auto cursor-pointer border border-white hover:scale-125 transition-transform"
-                onMouseDown={(e) => handleImageResizeStart(e, handle)}
-                style={{ top, left, transform: 'translate(-50%, -50%)', cursor: `${handle}-resize` }}
+                onPointerDown={(e) => handleImageResizeStart(e, handle)}
+                style={{ top, left, transform: 'translate(-50%, -50%)', cursor: `${handle}-resize`, touchAction: 'none' }}
               />
             );
           })}

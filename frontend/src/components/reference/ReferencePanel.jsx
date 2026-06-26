@@ -51,11 +51,12 @@ const ReferencePanel = ({ visible, onClose }) => {
   // Panel dragging
   const handleTitleMouseDown = useCallback((e) => {
     e.preventDefault();
+    e.currentTarget.setPointerCapture?.(e.pointerId);
     dragStartRef.current = { x: e.clientX - panelPos.x, y: e.clientY - panelPos.y };
     const move = (me) => setPanelPos({ x: me.clientX - dragStartRef.current.x, y: me.clientY - dragStartRef.current.y });
-    const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
-    window.addEventListener('mousemove', move);
-    window.addEventListener('mouseup', up);
+    const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
   }, [panelPos]);
 
   // File input fallback
@@ -74,8 +75,8 @@ const ReferencePanel = ({ visible, onClose }) => {
 
       {/* Title bar — draggable */}
       <div className="px-3 py-2 border-b cursor-move flex items-center justify-between select-none"
-        style={{ borderColor: theme.border }}
-        onMouseDown={handleTitleMouseDown}>
+        style={{ borderColor: theme.border, touchAction: 'none' }}
+        onPointerDown={handleTitleMouseDown}>
         <span className="text-xs font-mono uppercase tracking-wider" style={{ color: theme.primary }}>
           References
         </span>

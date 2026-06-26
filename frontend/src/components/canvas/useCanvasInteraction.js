@@ -175,6 +175,7 @@ export const useCanvasInteraction = ({ state, dispatch, currentPage }) => {
 
     if ((isPanTool && e.button === 0) || (isSpacePressed && e.button === 0) || isMiddleClick || isAltDrag) {
       e.preventDefault();
+      e.currentTarget.setPointerCapture?.(e.pointerId);
       setIsPanning(true);
       panStartRef.current = {
         x: e.clientX,
@@ -205,12 +206,12 @@ export const useCanvasInteraction = ({ state, dispatch, currentPage }) => {
       setIsPanning(false);
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('pointermove', handleMouseMove);
+    window.addEventListener('pointerup', handleMouseUp);
 
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('pointermove', handleMouseMove);
+      window.removeEventListener('pointerup', handleMouseUp);
     };
   }, [isPanning, dispatch]);
 
@@ -221,6 +222,7 @@ export const useCanvasInteraction = ({ state, dispatch, currentPage }) => {
 
     e.stopPropagation();
     e.preventDefault();
+    e.currentTarget.setPointerCapture?.(e.pointerId);
 
     const page = state.pages[pageIndex];
     const format = PAGE_FORMATS[page.format];
@@ -293,12 +295,12 @@ export const useCanvasInteraction = ({ state, dispatch, currentPage }) => {
       setDragOffset({ x: 0, y: 0 });
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('pointermove', handleMouseMove);
+    window.addEventListener('pointerup', handleMouseUp);
 
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('pointermove', handleMouseMove);
+      window.removeEventListener('pointerup', handleMouseUp);
     };
   }, [draggingPageIndex, dragOffset, state.zoom, dispatch, dragPreviewPos?.originalX, dragPreviewPos?.originalY]);
 

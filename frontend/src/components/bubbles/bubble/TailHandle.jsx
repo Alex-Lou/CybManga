@@ -3,7 +3,7 @@ import React from 'react';
 import { BUBBLE } from '../../../styles/tailwind';
 import { pointOnEllipse } from '../../../utils/helpers';
 
-const TailHandle = ({ bubble, onMouseDown }) => {
+const TailHandle = ({ bubble, onPointerDown }) => {
   const getTailPosition = () => {
     const cx = bubble.width / 2;
     const cy = bubble.height / 2;
@@ -24,10 +24,10 @@ const TailHandle = ({ bubble, onMouseDown }) => {
       className={BUBBLE.tailHandle}
       style={{
         left: tipPoint.x - 8, top: tipPoint.y - 8,
-        pointerEvents: 'auto', cursor: 'crosshair',
+        pointerEvents: 'auto', cursor: 'crosshair', touchAction: 'none',
         transform: isFlipped ? 'scaleX(-1)' : 'none'
       }}
-      onMouseDown={onMouseDown}
+      onPointerDown={onPointerDown}
       title="Tirer pour allonger ou tourner la queue"
     />
   );

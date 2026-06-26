@@ -23,7 +23,7 @@ const PanelContextMenu = ({
             borderColor: theme.border,
             color: theme.text,
           }}
-          onMouseDown={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
         >
           <div
             className="px-4 py-2.5 text-sm flex items-center gap-3 cursor-pointer rounded-md mx-1 transition-colors"
@@ -44,7 +44,7 @@ const PanelContextMenu = ({
         <div
           className="fixed inset-0 flex items-center justify-center"
           style={{ zIndex: 99998, backgroundColor: 'rgba(0,0,0,0.35)' }}
-          onMouseDown={(e) => {
+          onPointerDown={(e) => {
             e.stopPropagation();
             onRenameConfirm();
           }}
@@ -52,7 +52,7 @@ const PanelContextMenu = ({
           <div
             className="rounded-xl shadow-2xl p-4 flex flex-col gap-3 items-center"
             style={{ backgroundColor: theme.surface, borderColor: theme.border, border: `1px solid ${theme.border}`, minWidth: 260 }}
-            onMouseDown={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
           >
             <span className="text-sm font-semibold" style={{ color: theme.text }}>
               Renommer la case
@@ -75,14 +75,14 @@ const PanelContextMenu = ({
               <button
                 className="flex-1 px-3 py-1.5 text-sm rounded-lg border transition-colors"
                 style={{ borderColor: theme.border, color: theme.textSecondary }}
-                onMouseDown={(e) => { e.stopPropagation(); onRenameCancel(); }}
+                onPointerDown={(e) => { e.stopPropagation(); onRenameCancel(); }}
               >
                 Annuler
               </button>
               <button
                 className="flex-1 px-3 py-1.5 text-sm rounded-lg text-white transition-colors"
                 style={{ backgroundColor: theme.primary }}
-                onMouseDown={(e) => { e.stopPropagation(); onRenameConfirm(); }}
+                onPointerDown={(e) => { e.stopPropagation(); onRenameConfirm(); }}
               >
                 OK
               </button>
